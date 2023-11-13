@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FOLIO/Sinopia Chat Services</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+  <style>
+    img.service-btn {
+      height: 24px;
+      width: 24px;
+
+    }
+
+    .tab-pane {
+      border-left: 1px solid rgb(222, 226, 230);
+      border-right: 1px solid rgb(222, 226, 230);
+      border-bottom: 1px solid rgb(222, 226, 230);
+    }
+
+    textarea {
+      font-family: Lucida, monospace;
+    }
+
+   
+  </style>
+ <py-config type="toml">
+  packages = ["pydantic", "./wheels/pymarc-4.2.2-py3-none-any.whl"]
+
+  [[fetch]]
+  from = "src"
+  files = ["chat.py", "controls.py", "folio.py", "github.py", "sinopia.py", "workflows.py"]
+
+  
+ </py-config>
+</head>
+<body>
+  <py-script>
+    __version__ = "0.0.1"
+
+    import asyncio
+    import json
+
+    from js import console, document, localStorage
+
+    from chat import add_history, prompt_base, marc2folio_prompt, lcsh_prompt, update_chat_modal
+    from chat import login as chat_gpt_login, ChatGPT
+
+    from controls import (
+        clear_chat_prompt, 
+        init_workflow,
+        load_folio_default,
+        load_marc_record,
+        new_example,
+        run_prompt
+    )
+
+    from folio import Okapi, get_instance
+    from folio import login as okapi_login
+
+    from workflows import AssignLCSH, MARC21toFOLIO, NewResource
+    
+
+    version_span = document.getElementById("version")
+    version_span.innerHTML = __version__
+
+    chat_gpt_instance = None
+    existing_token = localStorage.getItem("chat_gpt_token")
+    if existing_token:
+        chat_gpt_instance = ChatGPT(key=existing_token)
+        update_chat_modal(chat_gpt_instance)
+        chatgpt_button = document.getElementById("chatGPTButton")
+        chatgpt_button.classList.remove("btn-outline-danger")
+        chatgpt_button.classList.add("btn-outline-success")
+
+
+    workflow = None
+
+
+    okapi = None
+    existing_okapi = localStorage.getItem("okapi")
+    if existing_okapi:
+        okapi = Okapi.parse_obj(json.loads(existing_okapi))
+        folio_btn = document.getElementById("folioButton")
+        folio_btn.classList.remove("btn-outline-danger")
+        folio_btn.classList.add("btn-outline-success")
+        
+
+    marc_file = Element("marc-upload-btn")
+
+    async def load_workflow(workflow_slug):
+        global workflow
+        workflow = await init_workflow(workflow_slug)
+
+
+    async def login_chatgpt():
+        global chat_gpt_instance
+        chat_gpt_instance = await chat_gpt_login()
+
+    async def login_okapi():
+        folio_iframe = document.getElementById("folio-system-frame")
+        folio_url_elem = document.getElementById("folioURI")
+        folio_iframe.src = folio_url_elem.value
+        folio_logged_in = await okapi_login(Okapi())
+        console.log(f"FOLIO Login? {folio_logged_in}")
+        
+
+
+    async def lcsh_conversation():
+        instance_uuid_elem = document.getElementById("instance-uuid")
+        instance = await get_instance(okapi, instance_uuid_elem.value)
+        raw_instance_elem = document.getElementById("raw-instance")
+        raw_instance_elem.innerHTML = instance
+        instance_subjects = document.getElementById("instance-subjects")
+        h3 = document.createElement("h3")
+        h3.innerHTML = "Instance Subjects"
+        instance_subjects.appendChild(h3)
+        subjects_ul = document.createElement("ul")
+        for subject in instance["subjects"]:
+            li = document.createElement("li")
+            li.innerHTML = subject
+            subjects_ul.appendChild(li)
+        instance_subjects.appendChild(subjects_ul)
+        results_div = document.getElementById("lcsh-result")
+        conversation = await chat_gpt_instance("\n".join(instance["subjects"]))
+        if "error" in conversation:
+            results_div.innerHTML = f"""Error status {conversation["error"]}\n{conversation["message"]}"""
+        else:
+            for choice in conversation.get("choices"):
+                pre_elem = document.createElement("pre")
+                pre_elem.innerHTML = choice["text"]
+                results_div.appendChild(pre_elem)
+        
+ 
+        
+
+    async def load_mrc_file():
+        marc_str = await load_marc_record(marc_file)
+        main_prompt = document.getElementById("mainChatPrompt")
+        main_prompt.value = marc_str
+        
+        
+    def load_sinopia():
+        sinopia_url_select = document.getElementById("sinopiaURI")
+        sinopia_iframe = document.getElementById("sinopia-frame")
+        sinopia_iframe.src = sinopia_url_select.value
+
+    def save_edge_ai():
+        edge_ai_api_url_elem = document.getElementById("edgeAIURI")
+        edge_ai_api_url = edge_ai_api_url_elem.value
+        print(f"Saves Edge AI API URI at {edge_ai_api_url}")
+        
+  </py-script>
+  <div class="container-fluid">
+   <div class="row">
+     <div class="col-9">
+      <h1>Chatting with Catalogs</h1>
+      <blockquote>An exploration of using LLMs with Library Systems</blockquote>
+     </div>
+     <div class="col-2">
+      <img src="imgs/hexsticker.png" alt="AI4LAM Hex Sticker and Logo" style="height: 100px;">
+     </div>
+   </div>
+   <pre class="mermaid">
+   flowchart LR
+       browser[Web browser]
+
+   </pre> 
+    <div class="row">
+      <div class="col-md-1">
+
+        <div class="btn-group-vertical" role="group">
+          <button type="button" class="btn btn-outline-danger"
+                  id="chatGPTButton" 
+                  data-bs-toggle="modal"
+                  data-bs-target="#chatApiKeyModal">
+             <img src="imgs/ChatGPT.png" alt="ChatGPT Tools" class="service-btn"> 
+             ChatGPT
+          </button>
+          <!-- <button type="button" 
+                  class="btn btn-outline-danger"
+                  id="edgeAIButton"
+                  data-bs-toggle="modal"
+                  data-bs-target="#edgeAIModal">
+            Edge AI
+          </button> -->
+          <button type="button" 
+                  id="folioButton" 
+                  class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#folioModal">
+            <img src="imgs/folio.png" alt="FOLIO LSP"  class="service-btn">
+            FOLIO
+          </button>
+          <button type="button" 
+                  class="btn btn-outline-success" 
+                  id="sinopiaButton" 
+                  data-bs-toggle="modal" 
+                  data-bs-target="#sinopiaModal">
+            <img src="imgs/sinopia.png" alt="Sinopia Linked Data Editor" class="service-btn">
+            Sinopia
+          </button>
+          <!-- <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#githubApiKeyModal">
+            <img src="imgs/github.png" alt="Github Tools" class="service-btn">
+            Github
+          </button> //-->
+          <button type="button" 
+                  class="btn btn-outline-success"
+                  data-bs-toggle="offcanvas" 
+                  data-bs-target="#pythonREPL" aria-controls="pythonREPL"
+          >
+            <img src="imgs/python.png" alt="Python REPL" class="service-btn">
+            Python
+          </button>
+        </div>
+      </div>
+      
+      <div class="col-md-11">
+
+        <ul class="nav nav-tabs">
+          <li class="nav-item">
+            <a class="nav-link active"
+              id="prompt-tab" 
+              data-bs-toggle="tab"
+              data-bs-target="#prompt-chat"
+              role="tab" 
+              aria-selected="true"
+              aria-controls="prompt-chat">
+              <i class="bi bi-chat-square-fill"></i>&nbsp;Chat 
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link"
+              id="folio-tab" 
+              data-bs-toggle="tab"
+              data-bs-target="#folio-system"
+              role="tab" 
+              aria-selected="true"
+              aria-controls="folio-system">
+              <img src="imgs/folio.png" alt="FOLIO LSP"  class="service-btn">
+              FOLIO</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link"
+              id="sinopia-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#sinopia"
+              aria-selected="false"
+              aria-controls="sinopia">
+              <img src="imgs/sinopia.png" alt="Sinopia Linked Data Editor" class="service-btn">
+              Sinopia</a>
+              
+          </li>
+         <li class="nav-item">
+            <a class="nav-link"
+              id="help-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#help"
+              aria-selected="false"
+              aria-controls="help">
+              <i class="bi bi-info-circle"></i> Help &amp; Documentation</a>
+          </li>
+        </ul>
+        <div class="tab-content">
+          <div class="tab-pane fade show active" role="tabpanel" id="prompt-chat" aria-labelledby="prompt-tab">
+            <div class="container">
+              <h2 id="workflow-title"></h2>
+              <div class="row">
+                <div class="col">
+                  <article class="card text-bg-primary d-none" id="system-card">
+                    <div class="card-header">System Context</div>
+                    <div class="card-body">
+                     <h5 class="card-title">System Message</h5>
+                     <p class="card-text">
+                       System messages helps in setting the behavior of the model 
+                     </p>
+                     <div class="card-text" id="system-message"></div>
+                     <h5 class="card-title">Additional Context</h5>
+                     <p class="card-text">For few-shot prompts, provides examples of question and 
+                      responses. De-select all examples for a zero-shot prompt.</p>
+                     <div class="text-center">
+                       <button class="btn btn-secondary m-b-1" py-click="new_example()">New Example</button>
+                     </div>
+                      <div id="prompt-examples"></div>
+                    </div>
+                  </article>
+                  <label for="mainChatPrompt" class="form-label">Prompt</label>
+		  <textarea class="form-control" id="mainChatPrompt" rows="10"></textarea>
+                  <div class="btn-group" id="prompt-btn-group">
+                        <input class="btn btn-warning d-none"
+                                type="file"
+                                py-change="asyncio.ensure_future(load_mrc_file())"
+                                id="marc-upload-btn"
+                                data-bs-toggle="tooltip" 
+                                data-bs-placement="top"
+                                data-bs-title="Upload MARC21 File">
+                         </input>
+                         <button class="btn btn-info" 
+                                 py-click="workflow=clear_chat_prompt(chat_gpt_instance)"
+                                 data-bs-toggle="tooltip" 
+                                 data-bs-placement="top"
+                                 data-bs-title="Clear Prompt">
+                         <i class="bi bi-wind"></i>
+                         </button>
+                         <button class="btn btn-info"
+                                 data-bs-toggle="tooltip"
+                                 data-bs-placement="top"
+                                 data-bs-title="Download Chat Workflow">
+                           <i class="bi bi-cloud-download"></i>
+                         </button>
+		         <button class="btn btn-info"
+                                 py-click="asyncio.ensure_future(run_prompt(workflow, chat_gpt_instance))"
+                                 data-bs-toggle="tooltip"
+                                 data-bs-placement="top"
+                                 data-bs-title="Run">
+			    <i class="bi bi-play-fill"></i>
+		         </button>
+
+                  </div>
+                </div>
+                <div class="col">
+                  <h2>Workflows</h2>
+                  <p>
+                     Select a prompt template to launch a specific workflow. 
+                  </p>
+                  <ul>
+                    <li>
+                      <a href="#" py-click="asyncio.ensure_future(load_workflow('new-resource'))">Catalog a New Resource by Chat</a>
+                    </li>
+                    <li>
+                      <a href="#" py-click="asyncio.ensure_future(load_workflow('transform-bf-folio'))">Transform Sinopia BIBFRAME to FOLIO Inventory</a>
+                    </li>
+                    <li>
+                      <a href="#" py-click="asyncio.ensure_future(load_workflow('add-lcsh'))">Add LCSH to Sinopia RDF or FOLIO Records</a>
+                    </li>
+                    <li>
+                      <a href="#" py-click="asyncio.ensure_future(load_workflow('marc-to-folio'))">Upload a MARC Record to create a FOLIO Inventory Record</a>
+                    </li>
+                  </ul>
+                  <div>
+                    <h2>Vector stores</h2>
+	            <p>
+                      To improve the context of the chat and reduce model hallucinations, 
+                      select one or more of the following vector datastores:
+                    </p>
+                     <div class="form-check"> 
+                      <input class="form-check-input" type="checkbox" value="" disabled id="folio-vector-db"></input>
+                      <label class="form-check-label" for="folio-vector-db">FOLIO Inventory</label>
+                     </div>
+                     <div class="form-check"> 
+                      <input class="form-check-input" type="checkbox" value="" disabled id="sinopia-vector-db"></input>
+                      <label class="form-check-label" for="sinopia-vector-db">Sinopia RDF</label>
+                     </div>
+                     <div class="form-check"> 
+                      <input class="form-check-input" type="checkbox" value="" id="lcsh-vector-db"></input>
+                      <label class="form-check-label" for="lcsh-vector-db">Library of Congress Subject Headings (LCSH)</label>
+                     </div>
+                  </div>
+                </div>
+	      </div>
+              <div class="text-center d-none" id="chat-loading">
+                <div class="spinner-border" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+              </div>
+              <article>
+                <h3>Chat History</h3>
+                <div id="chat-history">
+ 
+                </div>
+              </article>
+            </div> 
+          </div>
+          <div class="tab-pane fade" role="tabpanel" id="folio-system" aria-labelledby="folio-tab">
+             <div id="folio-default" class="container">
+               <p>To use the FOLIO Demo site, use the following credentials:</p>
+               <dl>
+                 <dt>FOLIO URL:</dt>
+                 <dd><a href="https://folio-nolana.dev.folio.org">https://folio-nolana.dev.folio.org</a></dd>
+                 <dt>Okapi URL:</dt>
+                 <dd><a href="https://folio-nolana-okapi.dev.folio.org/">https://folio-nolana-okapi.dev.folio.org/</a></dd>
+                 <dt>Tenant:</dt>
+                 <dd>diku</dd>
+                 <dt>Login:</dt>
+                 <dd>diku_admin</dd>
+                 <dt>Password:</dt>
+                 <dd>admin</dd>
+               </dl>
+               <button class="btn btn-warning" py-click="load_folio_default()">Load</button>
+             </div>
+             <iframe id="folio-system-frame" title="Embedded FOLIO System" src="" width="80%" height="800px"></iframe>
+          </div>
+          <div class="tab-pane fade" role="tabpanel" id="sinopia" aria-labelledby="sinopia-tab">
+            <iframe id="sinopia-frame" title="Embedded Sinopia System" src="https://stage.sinopia.io/" width="100%" height="800px">
+            </iframe>
+          </div>
+          <div class="tab-pane fade" role="tabpanel" id="help" aria-labelledby="help-tab">
+            
+            <div class="row">
+               <div class="col">
+                 <div class="container"> 
+                  <h2>Help</h2>    
+                  <p>
+                    A demonstration application for constructing library systems workflows using Large Language
+                    Models (LLM). A workflow is built using two usage patterns, <a href="#react-llm">ReAct</a> that
+                    integrates LLM in a Thought-Action-Observation loop for integrating external "actions" driven by
+                    engineered prompts and responses from LLM. We augment these ReAct loops with a vector database 
+                    populated by data from FOLIO and Library of Congress.  
+                   </p>
+                 </div>
+                 <article id="roadmap" class="container">
+                  <pre class="mermaid">
+                   flowchart LR
+                       browser[Web browser]
+                       chatGPT(ChatGPT)
+                       vectorDB[(Vector)]
+                       aiAPI(Edge AI Module)
+                       folio(FOLIO LSP)
+                       sinopia(Sinopia Linked Data Editor)
+
+                       browser --> aiAPI --> vectorDB --> chatGPT
+
+                       browser --> chatGPT
+
+                       browser --> chatGPT --> folio
+
+                       browser --> chatGPT --> sinopia
+
+                       browser --> folio
+
+                       browser --> sinopia  
+                  </pre>
+                 
+                 </article>
+               </div>
+               <div class="col">
+                 <h2>Documentation</h2>
+                 <article id="openai-api" class="container">
+                   <header>
+                     <h3>OpenAI API</h3>
+                   </header>
+                   <section>
+                     <p>
+                       This application uses the ChatGPT 
+                       <a href="https://platform.openai.com/docs/guides/text-generation/chat-completions-api">chat completion</a> API 
+                       using the <code>functions</code> parameter to emulate the ReAct pattern for calling functions that in turn, call 
+                       <a href="https://folio.org/">FOLIO</a>'s <a href="https://github.com/folio-org/okapi/">Okapi</a> APIs. 
+                     </p>
+                   </section>
+                 </article>
+                 <article>
+                   <header>
+                     <h3>Retrieval Augmented Generation (RAG)</h3>
+                   </header>
+
+                 </article>
+
+                 <article id="lit-review">
+                   <header>
+                     <h3>Selected Bibliography</h3>
+                     <figure>
+                       <blockquote class="blockquote">
+                        “...libraries are faced with the challenge of wrangling an infinite amount of data with finite time, funds, and personnel.”
+                       </blockquote>
+                       <figcaption class="blockquote-footer">
+                        Smith, C. (2021). Controlled vocabularies: Past, present and future of subject access.
+                        <cite title="Source Title">Cataloging & Classification Quarterly</cite>, 59(2-3), 186–202. 
+      			<a href="https://doi.org/10.1080/01639374.2021.1881007">https://doi.org/10.1080/01639374.2021.1881007</a>
+                       </figcaption>
+                     </figure>
+                     <figure>
+                       <blockquote class="blockquote">
+                        “Many groups have used [automated] tools in a semi-mediated process that best balances out efficiency and quality.”
+                       </blockquote>
+                       <figcaption class="blockquote-footer">
+                        Turp, C. Leanne Olson & Kelly Stathis (2023) From Uncontrolled Keywords to FAST? Attempting Metadata Reconciliation 
+                        for a Canadian Research Data Aggregator, <cite title="Source Title">Journal of Library Metadata</cite>, 
+                        DOI: <a href="https://doi.org/10.1080/19386389.2023.2251857">10.1080/19386389.2023.2251857</a>
+                       </figcaption>
+                     </figure>
+                     <figure>
+                       <blockquote class="blockquote">
+                        “... catalogers do not have to have a firm grasp on the inner statistical workings of each text mining 
+                        algorithm or computation methods…Understanding the process of preparing a corpus, selecting features, 
+                        and interpreting output is, perhaps, more important.”
+                       </blockquote>
+                       <figcaption class="blockquote-footer">
+                        Short, M. (2019). Text mining and subject analysis for fiction; or, using machine learning and information 
+                        extraction to assign subject headings to dime novels. 
+                        <cite title="Source Title">Cataloging & Classification Quarterly</cite>, 57(5), 315-336.
+                       </figcaption>
+                     </figure>
+                     <figure>
+                       <blockquote class="blockquote">
+                        “Catalogers and metadata experts among others in the information field have a role to play in developing, 
+                        exploring and responsibly using AI.”
+                       </blockquote>
+                       <figcaption class="blockquote-footer">
+                         Greenberg, J., Zhao, X., Monselise, M., Grabus, S., & Boone, J. (2021). Knowledge organization 
+                         systems: a network for AI with helping interdisciplinary vocabulary engineering. 
+                         <cite title="Source Title">Cataloging & Classification Quarterly</cite>, 59(8), 720-739.
+                       </figcaption>
+                     </figure>
+                     <figure>
+                       <blockquote class="blockquote">
+                         “Researchers have begun to show that for some professions, the wisest AI implementation scenario is 
+                         augmenting existing expertise with semi-automated support, a form of “human
+                         compatible” AI.
+                       </blockquote>
+                       <blockquote class="blockquote">
+                         “If automation is to be useful for the communities it seeks to support, it must be ushered in with 
+                         profound appreciation for, and in collaboration with, the professionals the automation would support.”
+                       </blockquote>
+                       <figcaption class="blockquote-footer">
+                         Hahn, J. (2021). Semi-automated methods for bibframe work entity description. 
+                         <cite title="Source Title">Cataloging & Classification Quarterly</cite>, 59(8), 853-867.
+                       </figcaption>
+                     </figure>
+                 </article>
+               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+<!-- Chat API Key Modal -->
+  <div class="modal fade" id="chatApiKeyModal" tabindex="-1" aria-labelledby="chatApiKeyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <img src="imgs/ChatGPT.png" alt="ChatGPT Tools"> 
+          <h5 class="modal-title" id="apiKeyModalLabel">Enter your ChatGPT API key</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="chatApiKeyModalBody">
+          <form>
+            <div class="mb-3">
+              <label for="chatApiKey" class="form-label">API Key</label>
+              <input type="text" class="form-control" id="chatApiKey" placeholder="Enter your secret API key" aria-describedby="apiKeyHelp">
+              <div id="apiKeyHelp" class="form-text">This API key will be used to access restricted resources. Please keep it safe.</div>
+            </div>
+            <button type="button"
+                    data-bs-dismiss="modal"
+                    py-click="asyncio.ensure_future(login_chatgpt())"
+                    class="btn btn-primary">Submit</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edge AI Key Modal -->
+  <div class="modal fade" id="edgeAIModal" tabindex="-1" aria-labelledby="edgeAIModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="edgeAIModalLabel">Enter Edge AI API URI</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="edgeAIModalBody">
+          <form>
+            <div class="mb-3">
+              <label for="edgeAIURI" class="form-label">Edge AI API</label>
+              <input type="text" class="form-control" id="edgeAIURI" placeholder="Enter URI to the Edge AI API" aria-describedby="edgeAIapiHelp">
+              <div id="edgeAIapiHelp" class="form-text">This Edge AI API connets to either a local or remote API endpoint.</div>
+            </div>
+            <button type="button"
+                    data-bs-dismiss="modal"
+                    py-click="save_edge_ai()"
+                    class="btn btn-primary">Submit</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- FOLIO Login Modal -->
+  <div class="modal fade" id="folioModal" tabindex="-1" aria-labelledby="folioModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <img src="imgs/folio.png" alt="FOLIO LSP" style="height: 64px;">
+          <h5 class="modal-title" id="folioModalLabel">Login to FOLIO</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="folioModalBody">
+          <form>
+            <div class="mb-3">
+              <label for="folioURI" class="form-label">FOLIO URI</label>
+              <input class="form-control" id="folioURI">
+            </div>
+             <div class="mb-3">
+              <label for="okapiURI" class="form-label">Okapi URI</label>
+              <input class="form-control" id="okapiURI">
+            </div>
+            <div class="mb-3">
+              <label for="folioTenant" class="form-label">Tenant</label>
+              <input class="form-control" id="folioTenant">
+            </div>
+            <div class="mb-3">
+              <label for="folioUser" class="form-label">Username</label>
+              <input class="form-control" id="folioUser">
+            </div>
+            <div class="mb-3">
+              <label for="folioPassword" class="form-label">Password</label>
+              <input type="password" class="form-control" id="folioPassword">
+            </div>
+            <button type="button"
+                    data-bs-dismiss="modal"
+                    class="btn btn-primary"
+                    py-click="asyncio.ensure_future(login_okapi())">Login</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Github API Key Modal -->
+  <div class="modal fade" id="githubApiKeyModal" tabindex="-1" aria-labelledby="githubApiKeyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <img src="imgs/github.png" alt="Github Tools" style="height: 64px;">
+          <h5 class="modal-title" id="apiKeyModalLabel">Enter your Github API key</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label for="githubApiKey" class="form-label">API Key</label>
+              <input type="text" class="form-control" id="githubApiKey" placeholder="Enter your secret API key" aria-describedby="apiKeyHelp">
+              <div id="apiKeyHelp" class="form-text">This API key will be used to access restricted resources. Please keep it safe.</div>
+            </div>
+            <button class="btn btn-primary">Submit</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sinopia Login-->
+  <div class="modal fade" id="sinopiaModal" tabindex="-1" aria-labelledby="sinopiaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <img src="imgs/sinopia.png" alt="Sinopia Hex Sticker" style="height: 64px;">
+          <h5 class="modal-title" id="sinopiaModalLabel">Enter Sinopia URI</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label for="sinopiaURI" class="form-label">Sinopia URI</label>
+              <select id="sinopiaURI" aria-describedby="sinopiaHelp" class="form-control">
+                <option value="https://development.sinopia.io">Development (https://development.sinopia.io)</option>
+                <option value="https://stage.sinopia.io">Stage (https://stage.sinopia.io)</option>
+                <option value="https://sinopia.io">Production (https://sinopia.io)</option>
+              </select>
+              <div id="sinopiaHelp" class="form-text">Please select development, stage, or production Sinopia environments</div>
+            </div>
+            <button class="btn btn-primary" 
+                    data-bs-dismiss="modal"
+                    type="button"
+                    py-click="load_sinopia()">Submit</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Python OffCanvas -->
+  <div class="offcanvas offcanvas-bottom" 
+       tabindex="-1" 
+       id="pythonREPL"
+       style="background-color: rgb(245, 249, 250)" 
+       data-bs-scroll="true" 
+       data-bs-backdrop="false" 
+       aria-labelledby="pythonOffCanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="pythonOffCanvasLabel">
+       <img src="imgs/python.png" alt="Python REPL" class="service-btn">
+        Python
+      </h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+    <div class="row">
+      <div class="col-md-2">
+        <p>Interact Programmatically with Tools through the REPL</p>
+      </div>
+      <div class="col-md-9">
+        <div id="python-wrapper">
+          <py-repl id="chat-repl" auto-generate="true"></py-repl>
+          <div id="py-output"></div>
+       </div>
+      </div>
+    </div>
+
+   </div>
+  </div>
+
+  <!-- Error Toast -->
+  <div aria-live="polite" aria-atomic="true" class="d-flex justify-content-center align-items-center w-100">
+    <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="toast-header">
+        <strong class="me-auto">Error Message</strong>
+        <small>11 mins ago</small>
+        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+       </div>
+       <div class="toast-body" id="errorToastBody"></div>
+    </div>
+  </div>
+     
+  </div>
+  <footer class="align-middle">
+   <small>
+   <p>
+     An experimental Chat application by AI4LAM Metadata Working Group.
+     Version <span id="version"></span> &copy;2023. All source code licensed under the Apache 2, code repository at 
+     <a href="https://github.com/AI4LAM/catalog-chat">https://github.com/AI4LAM/catalog-chat</a>.
+   </p>
+   </small>
+  </footer>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" 
+          integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+ <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+ <script>
+  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+  const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+
+ </script>
+ <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true });
+ </script>
+ </body>
+</html>
