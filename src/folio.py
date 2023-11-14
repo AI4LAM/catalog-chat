@@ -155,7 +155,7 @@ async def get_types(endpoint, selected_types, type_key, name_key="name"):
 
 
 async def get_contributor_types() -> dict:
-    selected_types = ["Author"]
+    selected_types = ["Actor", "Author", "Contributor", "Editor", "Narrator", "Publisher"]
     output = await get_types(
         "/contributor-types?limit=500", selected_types, "contributorTypes"
     )

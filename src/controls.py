@@ -18,6 +18,8 @@ def clear_chat_prompt(chat_gpt_instance):
     main_chat_textarea.value = ""
     mrc_upload_btn = document.getElementById("marc-upload-btn")
     mrc_upload_btn.classList.add("d-none")
+    prompt_history = document.getElementById("chat-history")
+    prompt_history.innerHTML = ""
     if chat_gpt_instance != None:
         chat_gpt_instance.messages = []
     loading_spinner = document.getElementById("chat-loading")

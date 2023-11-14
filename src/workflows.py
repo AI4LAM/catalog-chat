@@ -186,8 +186,7 @@ to a FOLIO Instance JSON record
         
         for contributor in record.get("contributors", []):
             contributor["contributorTypeId"] = self.contributor_types.get(
-                contributor.get("contributorTypeText"),
-                    "Contributor"
+                contributor.get("contributorTypeText", "Contributor")
             )
             contributor[
                 "contributorNameTypeId"
