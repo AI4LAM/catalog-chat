@@ -26,7 +26,7 @@
    
   </style>
  <py-config type="toml">
-  packages = ["pydantic", "./wheels/pymarc-4.2.2-py3-none-any.whl"]
+  packages = ["pydantic", "./wheels/pymarc-4.2.2-py3-none-any.whl", "./wheels/rdflib-6.3.1-py3-none-any.whl"]
 
   [[fetch]]
   from = "src"
@@ -41,15 +41,25 @@
 
     import asyncio
     import json
+    import sys
+
+    # Hack to load rdflib
+    setattr(sys.stderr, 'isatty', lambda : True)
 
     from js import console, document, localStorage
 
-    from chat import add_history, prompt_base, marc2folio_prompt, lcsh_prompt, update_chat_modal
+    from chat import (
+        add_history,
+        delete_key,
+        update_chat_modal
+    )
+
     from chat import login as chat_gpt_login, ChatGPT
 
     from controls import (
         clear_chat_prompt, 
         init_workflow,
+        load_chat_session,
         load_folio_default,
         load_marc_record,
         new_example,
@@ -162,11 +172,6 @@
       <img src="imgs/hexsticker.png" alt="AI4LAM Hex Sticker and Logo" style="height: 100px;">
      </div>
    </div>
-   <pre class="mermaid">
-   flowchart LR
-       browser[Web browser]
-
-   </pre> 
     <div class="row">
       <div class="col-md-1">
 
@@ -386,7 +391,7 @@
                  <dt>Password:</dt>
                  <dd>admin</dd>
                </dl>
-               <button class="btn btn-warning" py-click="load_folio_default()">Load</button>
+               <button class="btn btn-warning" py-click="load_folio_default()" data-bs-toggle="modal" data-bs-target="#folioModal">Load</button>
              </div>
              <iframe id="folio-system-frame" title="Embedded FOLIO System" src="" width="80%" height="800px"></iframe>
           </div>
@@ -394,43 +399,32 @@
             <iframe id="sinopia-frame" title="Embedded Sinopia System" src="https://stage.sinopia.io/" width="100%" height="800px">
             </iframe>
           </div>
-          <div class="tab-pane fade" role="tabpanel" id="help" aria-labelledby="help-tab">
+          <div class="tab-pane fade" role="tabpanel" id="help" aria-labelledby="help-tab" >
             
             <div class="row">
                <div class="col">
                  <div class="container"> 
                   <h2>Help</h2>    
+                  <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <strong>NOTE!</strong> To use <em>Chatting with Catalogs</em>, you'll need an active ChatGPT
+                     <a href="https://help.openai.com/en/articles/4936850-where-do-i-find-my-api-key">token</a>.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
                   <p>
                     A demonstration application for constructing library systems workflows using Large Language
-                    Models (LLM). A workflow is built using two usage patterns, <a href="#react-llm">ReAct</a> that
-                    integrates LLM in a Thought-Action-Observation loop for integrating external "actions" driven by
-                    engineered prompts and responses from LLM. We augment these ReAct loops with a vector database 
-                    populated by data from FOLIO and Library of Congress.  
+                    Models (LLM). 
                    </p>
                  </div>
-                 <article id="roadmap" class="container">
-                  <pre class="mermaid">
-                   flowchart LR
-                       browser[Web browser]
-                       chatGPT(ChatGPT)
-                       vectorDB[(Vector)]
-                       aiAPI(Edge AI Module)
-                       folio(FOLIO LSP)
-                       sinopia(Sinopia Linked Data Editor)
+                 <article id="workflows" class="container">
+                   <header>
+                     <h3>Workflows</h3>
+                   </header>
+                   <p>
+                   </p>
+                   <img src="imgs/workflow-flowchart.png" alt="Basic Cataloging Workflow Flowchart" />
+                   <section>
 
-                       browser --> aiAPI --> vectorDB --> chatGPT
-
-                       browser --> chatGPT
-
-                       browser --> chatGPT --> folio
-
-                       browser --> chatGPT --> sinopia
-
-                       browser --> folio
-
-                       browser --> sinopia  
-                  </pre>
-                 
+                   </section>
                  </article>
                </div>
                <div class="col">
@@ -444,18 +438,52 @@
                        This application uses the ChatGPT 
                        <a href="https://platform.openai.com/docs/guides/text-generation/chat-completions-api">chat completion</a> API 
                        using the <code>functions</code> parameter to emulate the ReAct pattern for calling functions that in turn, call 
-                       <a href="https://folio.org/">FOLIO</a>'s <a href="https://github.com/folio-org/okapi/">Okapi</a> APIs. 
+                       <a href="https://folio.org/">FOLIO</a>'s <a href="https://github.com/folio-org/okapi/">Okapi</a> APIs and 
+                       Sinopia's <a href="">APIs</a>
                      </p>
                    </section>
                  </article>
-                 <article>
+                 <article class="container" id="meta-wg">
+                  <header>
+                    <h3>ai4lam Metadata Working Group</h3>
+                  </header>
+                  <section>
+                    <p>
+                      The <a href="https://ai4lam.github.io/metadata-working-group/">ai4lam Metadata Working Group</a>, part of 
+                      the larger <a href="http://ai4lam.org/">ai4lam</a> community, started experimenting with the web interface
+                      for <a href="https://chat.openai.com/">ChatGPT</a>. In 2023, the group explored the use of ChatGPT which 
+                      became the base for the workflows used in this application.
+                    </p>
+                    <ul>
+                      <li>
+                        <a href="#" 
+                           data-bs-toggle="modal" 
+                           data-bs-target="#gptChatSessionModal"
+                           py-click="load_chat_session('FOLIOBookCheckout')">FOLIO Book Checkout</a>
+                      </li>
+                      <li>
+                        <a href="#" 
+                           data-bs-toggle="modal" 
+                           data-bs-target="#gptChatSessionModal"     
+                           py-click="load_chat_session('MARC21Conversions')">MARC21 Conversion to FOLIO Instance Record</a>
+                      </li>
+                      <li>
+                        <a href="#"
+                           data-bs-toggle="modal" 
+                           data-bs-target="#gptChatSessionModal"     
+                           py-click="load_chat_session('BFTransformation')">Sinopia BIBFRAME to FOLIO Instance Record &amp; LCSH assignment</a>
+                      </li>
+                    </ul>
+                  </section>
+                 </article>
+                 <article class="container">
                    <header>
                      <h3>Retrieval Augmented Generation (RAG)</h3>
                    </header>
 
                  </article>
 
-                 <article id="lit-review">
+                 <article id="lit-review" class="container">
                    <header>
                      <h3>Selected Bibliography</h3>
                      <figure>
@@ -531,7 +559,7 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <img src="imgs/ChatGPT.png" alt="ChatGPT Tools"> 
+          <img src="imgs/ChatGPT.png" alt="ChatGPT Tools">&nbsp; 
           <h5 class="modal-title" id="apiKeyModalLabel">Enter your ChatGPT API key</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
@@ -672,6 +700,24 @@
     </div>
   </div>
 
+  <!-- ChatGPT Session-->
+  <div class="modal" tabindex="-1" id="gptChatSessionModal" aria-hidden="true">
+   <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Workflow</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <iframe src="" id="chat-gpt-session" width="95%" height="800px"></iframe>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+   </div>
+  </div>
+
   <!-- Python OffCanvas -->
   <div class="offcanvas offcanvas-bottom" 
        tabindex="-1" 
@@ -691,6 +737,11 @@
     <div class="row">
       <div class="col-md-2">
         <p>Interact Programmatically with Tools through the REPL</p>
+        <strong>Global Variables</strong>
+        <ul>
+          <li><code>workflow</code> - The current workflow object, default is None</li>
+          <li><code>chat_gpt_instance</code> - Chat GPT Instance</li>
+        </ul>
       </div>
       <div class="col-md-9">
         <div id="python-wrapper">
@@ -716,7 +767,7 @@
   </div>
      
   </div>
-  <footer class="align-middle">
+  <footer class="p-3 mb-5 rounded">
    <small>
    <p>
      An experimental Chat application by AI4LAM Metadata Working Group.
@@ -732,10 +783,6 @@
   const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
   const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
 
- </script>
- <script type="module">
-    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-    mermaid.initialize({ startOnLoad: true });
  </script>
  </body>
 </html>

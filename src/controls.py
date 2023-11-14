@@ -26,6 +26,11 @@ def clear_chat_prompt(chat_gpt_instance):
     return None
 
 
+def load_chat_session(page_name):
+    iframe_chat = document.getElementById('chat-gpt-session')
+    iframe_chat.src = f"history/{page_name}.html"
+
+
 def load_folio_default():
     folio_modal = document.getElementById("folioModal")
     folio_url = document.getElementById("folioURI")
@@ -62,7 +67,6 @@ async def init_workflow(workflow_slug):
     system_card.classList.remove("d-none")
     # chat_prompt_textarea.value = prompt_base
     _clear_vector_db()
-    console.log("Before setting mrc_upload_btn")
     mrc_upload_btn = document.getElementById("marc-upload-btn")
     mrc_upload_btn.classList.add("d-none")
 

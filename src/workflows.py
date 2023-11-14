@@ -41,6 +41,18 @@ load_instance_sig = {
     }
 }
 
+load_sinopia_sig = {
+    "name": "load_sinopia",
+    "description": "Loads a Sinopia URL and returns the RDF as JSON-LD",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "resource_url": {"type": "string", "description": "URL to a Sinopia Resource"}
+
+        }
+    }
+}
+
 class WorkFlow(object):
     name: str = ""
     system: str = ""
@@ -164,13 +176,22 @@ to a FOLIO Instance JSON record
         self.zero_shot = zero_shot
 
     def __update_record__(self, record):
-        record["instanceTypeId"] = self.instance_types.get("text")
+        record["instanceTypeId"] = self.instance_types.get("unspecified")
         for identifier in record.get("identifiers", []):
             if "identifierTypeName" in identifier:
                 ident_name = identifier.pop("identifierTypeName")
-                if ident_name.startswith("OCLC"):
+                if ident_name.upper().startswith("OCLC"):
                     ident_name = "OCLC"
                 identifier["identifierTypeId"] = self.identifier_types.get(ident_name)
+        
+        for contributor in record.get("contributors", []):
+            contributor["contributorTypeId"] = self.contributor_types.get(
+                contributor.get("contributorTypeText"),
+                    "Contributor"
+            )
+            contributor[
+                "contributorNameTypeId"
+            ] = self.contributor_name_types.get("Personal name")
 
 
 
@@ -198,11 +219,12 @@ to a FOLIO Instance JSON record
             return
         add_history(chat_result, "response")
         function_name = function_call.get("name")
-        args = json.loads(function_call.get("arguments"))
+        args = json.loads(function_call.get("arguments"), strict=False)
         console.log(f"Function name {function_name} args: {args}")
         if function_name.startswith("add_instance"):
-            record = json.loads(args.get("record"))
-            console.log("Before updating record")
+            record = args.get("record")
+            if isinstance(record, str):
+                record = json.loads(record, strict=False)
             self.__update_record__(record)
             instance_url = await add_instance(json.dumps(record))
             msg = f"Load FOLIO Instance {instance_url}"
@@ -295,10 +317,40 @@ class SinopiaToFOLIO(FOLIOWorkFlow):
     system_prompt = """You are an expert cataloger, given a Sinopia URL you will retrieve the JSON Linked Data
 and convert it to a FOLIO Instance JSON record"""
 
-    examples = []
+    examples = [
+        """Q: @prefix bf: <http://id.loc.gov/ontologies/bibframe/> .
+@prefix bflc: <http://id.loc.gov/ontologies/bflc/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sinopia: <http://sinopia.io/vocabulary/> .
+
+<https://api.stage.sinopia.io/resource/bd072fe6-f189-4a39-9f0c-0dac4d1ef0bd> a bf:Work ;
+    bf:title [ a bf:Title ;
+    bf:mainTitle "Parable of the Sower"@en ] ;
+    bf:contribution [ a bflc:PrimaryContribution ;
+            bf:agent <http://id.loc.gov/authorities/names/n2020014067> ;
+            bf:role <http://id.loc.gov/vocabulary/relators/aut> ] ;
+    bf:note [ a bf:Note ;
+            rdfs:label "Includes bibliographical references (pages [235]-301) and index"@en ] ;
+    
+
+<http://id.loc.gov/rwo/agents/n79056654> a bf:Agent,
+        bf:Person ;
+    rdfs:label "Butler, Octavia E."@en .
+
+<http://id.loc.gov/vocabulary/relators/aut> a bf:Role ;
+    rdfs:label "Author" .
+
+    A:  {"title": "Parable of the Sower", "source": "Sinopia", 
+         "contributors": [{"name": "Octiva Butler", "contributorTypeText": "Author", "primary": true}], 
+         "notes": [{ value: "Includes bibliographical references (pages [235]-301) and index"}],
+         'languages': ['eng']}
+
+"""
+    ]
 
     functions = [
-        add_instance
+        load_sinopia_sig,
+        add_instance_sig
     ]
 
     def __init__(self,  zero_shot=False):
@@ -316,8 +368,16 @@ and convert it to a FOLIO Instance JSON record"""
 
     async def run(self, chat_instance: ChatGPT, initial_prompt: str):
         add_history(initial_prompt, "prompt")
-        chat_result.functions = SinopiaToFOLIO.functions
+        chat_instance.functions = SinopiaToFOLIO.functions
         chat_result = await chat_instance(initial_prompt)
         add_history(chat_result, "response")
-
+        function_call = chat_result["choices"][0]["message"].get("function_call")
+        if function_call:
+            function_name = function_call.get("name")
+            args = json.loads(function_call.get("arguments"))
+            if function_name == "load_sinopia":
+                sinopia_rdf = await load_sinopia(args.get("resource_url"))
+                add_history(f"<pre>{sinopia_rdf}</pre>", "prompt")
+                chat_result_rdf = await chat_instance(sinopia_rdf)
+                add_history(chat_result_rdf, "response") 
  

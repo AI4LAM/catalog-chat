@@ -10,7 +10,7 @@ import re
 import uuid
 
 from typing import Optional
-from js import console, document, localStorage
+from js import console, document, localStorage, window
 
 from pyodide.http import pyfetch
 
@@ -98,14 +98,19 @@ def add_history(value, type_of):
     return result
 
 
+def delete_key():
+    localStorage.removeItem("chat_gpt_token")
+    window.location.reload()
+    
+
 async def login():
     bearer_key_element = document.getElementById("chatApiKey")
     chat_gpt = ChatGPT(key=bearer_key_element.value)
     chatgpt_button = document.getElementById("chatGPTButton")
     chatgpt_button.classList.remove("btn-outline-danger")
     chatgpt_button.classList.add("btn-outline-success")
-    chat_prompts_div = document.getElementById("chat-gpt-prompts")
-    chat_prompts_div.classList.remove("d-none")
+    #chat_prompts_div = document.getElementById("chat-gpt-prompts")
+    #chat_prompts_div.classList.remove("d-none")
     update_chat_modal(chat_gpt)
     return chat_gpt
 
@@ -200,7 +205,9 @@ def update_chat_modal(chat_gpt_instance):
     max_tokens_dd = document.createElement("dd")
     max_tokens_dd.innerHTML = chat_gpt_instance.max_tokens
     instance_dl.appendChild(max_tokens_dd)
-
+    button_div = document.createElement("div")
+    button_div.innerHTML = """<button class="btn btn-primary" py-click="delete_key()">Delete Key</button>"""
+    modal_body.appendChild(button_div)
 
 action_re = re.compile(r"^Action: (\w+): (.*)$")
 
