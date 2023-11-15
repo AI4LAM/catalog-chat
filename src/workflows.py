@@ -5,6 +5,7 @@ import time
 
 from js import console, document
 
+
 from chat import add_history, prompt_base, ChatGPT
 
 from folio import (

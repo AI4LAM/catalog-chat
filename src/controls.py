@@ -1,9 +1,11 @@
 import asyncio
+import datetime
 import io
+import json
 
 import pymarc
 
-from js import console, document, alert
+from js import Blob, console, document, alert, JSON, URL
 
 from chat import add_history
 from workflows import AssignLCSH, NewResource, MARC21toFOLIO, SinopiaToFOLIO
@@ -27,6 +29,29 @@ def clear_chat_prompt(chat_gpt_instance):
     _clear_vector_db()
     return None
 
+
+def download(chat_instance, workflow):
+    export_obj = {
+        "chat_instance": {
+           "endpoint": chat_instance.openai_url,
+           "model": chat_instance.model,
+           "temperature": chat_instance.temperature,
+           "messages": chat_instance.messages,
+           "functions": chat_instance.functions
+        },
+        "workflow": {
+           "name": workflow.name
+        }
+    }
+    anchor = document.createElement("a")
+    blob = Blob.new([json.dumps(export_obj, indent=2)], { "type": 'application/json' })
+    anchor.href = URL.createObjectURL(blob)
+    current = datetime.datetime.utcnow()
+    anchor.download =  f"export-{current.isoformat()}.json"
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+    # download_btn.removeChild(anchor)
 
 def load_chat_session(page_name):
     iframe_chat = document.getElementById('chat-gpt-session')

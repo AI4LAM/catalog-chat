@@ -1,6 +1,8 @@
 import asyncio
+import datetime
 import io
 import json
+import uuid
 
 import pymarc
 
@@ -8,7 +10,7 @@ from typing import Optional
 from pydantic import BaseModel
 from pyodide.http import pyfetch
 
-from js import console, document, Headers, localStorage, alert
+from js import console, document, JSON, Headers, localStorage, alert
 
 from chat import add_history
 
@@ -25,6 +27,27 @@ class Okapi(BaseModel):
             "x-okapi-tenant": self.tenant,
         }
 
+
+def error_card(errors, okapi):
+    prompt_history = document.getElementById("chat-history")
+    created_at = datetime.datetime.utcnow()
+    card_html = f"""<div id="{uuid.uuid4()}" class="card mb-3">
+      <div class="card-header text-bg-danger">
+        FOLIO Errors Response  at {created_at.isoformat()} 
+      </div>
+      <div class="card-body">"""
+    for error in errors:
+        card_html += f"\n<pre>{JSON.stringify(error, None, 4)}</pre>"
+    card_html += """</div>
+      <div class="card-footer">FOLIO server {okapi.folio} Okapi API {okapi.urll}</div>
+    </div>"""
+    if prompt_history.hasChildNodes():
+        prompt_history.insertBefore(row_div, prompt_history.firstChild)
+    else:
+        prompt_history.appendChild(row_div)
+    
+
+   
 
 def _get_okapi():
     existing_okapi = localStorage.getItem("okapi")
@@ -136,8 +159,7 @@ async def add_instance(record):
         return f"""{okapi.folio}/inventory/view/{instance["id"]}"""
     else:
         console.log(f"Error adding {instance_response}")
-        errors = await instance_response.json()
-        add_history(f"<pre>{errors}</pre>", "prompt")
+        error_card(instance_response, okapi)
         return instance_response
 
 

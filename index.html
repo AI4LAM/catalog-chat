@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>FOLIO/Sinopia Chat Services</title>
+  <title>Chatting with Catalogs</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
   <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
@@ -26,7 +26,7 @@
    
   </style>
  <py-config type="toml">
-  packages = ["pydantic", "./wheels/pymarc-4.2.2-py3-none-any.whl", "./wheels/rdflib-6.3.1-py3-none-any.whl"]
+  packages = ["pydantic", "./wheels/pymarc-4.2.2-py3-none-any.whl", "./wheels/rdflib-6.3.1-py3-none-any.whl",]
 
   [[fetch]]
   from = "src"
@@ -46,7 +46,7 @@
     # Hack to load rdflib
     setattr(sys.stderr, 'isatty', lambda : True)
 
-    from js import console, document, localStorage
+    from js import alert, console, document, localStorage
 
     from chat import (
         add_history,
@@ -57,7 +57,8 @@
     from chat import login as chat_gpt_login, ChatGPT
 
     from controls import (
-        clear_chat_prompt, 
+        clear_chat_prompt,
+        download, 
         init_workflow,
         load_chat_session,
         load_folio_default,
@@ -98,6 +99,13 @@
         
 
     marc_file = Element("marc-upload-btn")
+
+
+    def download_history():
+        if chat_gpt_instance is not None and workflow is not None:
+            download(chat_gpt_instance, workflow)
+        else:
+            alert("Need chat gpt instance and workflow to download history")
 
     async def load_workflow(workflow_slug):
         global workflow
@@ -170,6 +178,9 @@
      </div>
      <div class="col-2">
       <img src="imgs/hexsticker.png" alt="AI4LAM Hex Sticker and Logo" style="height: 100px;">
+      <div>
+       <small class="align-middle">Bugs? Ideas for improvement? Please add an issue <a href="https://github.com/AI4LAM/catalog-chat/issues" target="_blank">here</a>.</small>
+      </div>
      </div>
    </div>
     <div class="row">
@@ -217,6 +228,7 @@
             Python
           </button>
         </div>
+        
       </div>
       
       <div class="col-md-11">
@@ -266,7 +278,7 @@
               <i class="bi bi-info-circle"></i> Help &amp; Documentation</a>
           </li>
         </ul>
-        <div class="tab-content">
+                <div class="tab-content">
           <div class="tab-pane fade show active" role="tabpanel" id="prompt-chat" aria-labelledby="prompt-tab">
             <div class="container">
               <h2 id="workflow-title"></h2>
@@ -308,8 +320,10 @@
                          <i class="bi bi-wind"></i>
                          </button>
                          <button class="btn btn-info"
+                                 id="download-chat-wkflw-btn"
                                  data-bs-toggle="tooltip"
                                  data-bs-placement="top"
+                                 py-click="download_history()"
                                  data-bs-title="Download Chat Workflow">
                            <i class="bi bi-cloud-download"></i>
                          </button>
@@ -412,7 +426,7 @@
                   </div>
                   <p>
                     A demonstration application for constructing library systems workflows using Large Language
-                    Models (LLM). 
+                    Models (LLM).
                    </p>
                  </div>
                  <article id="workflows" class="container">
@@ -420,10 +434,23 @@
                      <h3>Workflows</h3>
                    </header>
                    <p>
+                     Workflows in this app are inspired by <a href="https://airflow.apache.org/">Apache Airflow</a> and 
+                     <a href="https://www.prefect.io/">Prefect.io</a>. 
                    </p>
                    <img src="imgs/workflow-flowchart.png" alt="Basic Cataloging Workflow Flowchart" />
                    <section>
 
+                   </section>
+                 </article>
+                 <article id="roadmap" class="container">
+                   <header>
+                     <h3>Roadmap</h3>
+                   </header>
+                   <section>
+                    <ul>
+                      <li>Support for more Large Language Models (Llama2, Claude, Bard, etc.)</li> 
+
+                    </ul>
                    </section>
                  </article>
                </div>
