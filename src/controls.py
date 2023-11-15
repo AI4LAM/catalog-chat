@@ -111,7 +111,6 @@ async def init_workflow(workflow_slug):
             workflow = "bf_to_marc"
 
         case "marc-to-folio":
-            console.log("In marc-to-folio")
             mrc_upload_btn.classList.remove("d-none")
             workflow = MARC21toFOLIO(zero_shot=True)
             msg = workflow.name
@@ -133,7 +132,7 @@ async def init_workflow(workflow_slug):
             msg = "None selected"
             workflow = None
 
-    console.log(f"Workflow {workflow_slug} {workflow}")
+    # console.log(f"Workflow {workflow_slug} {workflow}")
     workflow_title_h2.innerHTML = f"<strong>Workflow:</strong> {msg}"
     if hasattr(workflow, "system"):
         system_result = await workflow.system()
@@ -177,7 +176,7 @@ async def run_prompt(workflow, chat_gpt_instance):
     loading_spinner = document.getElementById("chat-loading")
     loading_spinner.classList.remove("d-none")
 
-    console.log(f"Workflow is {workflow}")
+    #console.log(f"Workflow is {workflow}")
     if workflow is None:
         alert("Workflow is None")
         

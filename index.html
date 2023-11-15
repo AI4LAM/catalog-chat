@@ -67,7 +67,7 @@
         run_prompt
     )
 
-    from folio import Okapi, get_instance
+    from folio import Okapi, get_instance, logout_folio
     from folio import login as okapi_login
 
     from workflows import AssignLCSH, MARC21toFOLIO, NewResource
@@ -179,7 +179,7 @@
      <div class="col-2">
       <img src="imgs/hexsticker.png" alt="AI4LAM Hex Sticker and Logo" style="height: 100px;">
       <div>
-       <small class="align-middle">Bugs? Ideas for improvement? Please add an issue <a href="https://github.com/AI4LAM/catalog-chat/issues" target="_blank">here</a>.</small>
+       <small class="align-middle">Bugs? Ideas for improving? Please add a ticket <a href="https://github.com/AI4LAM/catalog-chat/issues" target="_blank">here</a>.</small>
       </div>
      </div>
    </div>
@@ -435,7 +435,8 @@
                    </header>
                    <p>
                      Workflows in this app are inspired by <a href="https://airflow.apache.org/">Apache Airflow</a> and 
-                     <a href="https://www.prefect.io/">Prefect.io</a>. 
+                     <a href="https://www.prefect.io/">Prefect.io</a>. A workflow wraps LLM API calls along with calling 
+                     specific FOLIO Okapi and Sinopia APIs by building context and examples specific to the use case. 
                    </p>
                    <img src="imgs/workflow-flowchart.png" alt="Basic Cataloging Workflow Flowchart" />
                    <section>
@@ -448,14 +449,33 @@
                    </header>
                    <section>
                     <ul>
-                      <li>Support for more Large Language Models (Llama2, Claude, Bard, etc.)</li> 
-
+                      <li>Support for more Large Language Models (Llama2, Claude, Bard, etc.) ticket <a href="https://github.com/AI4LAM/catalog-chat/issues/1">#1</a></li> 
+                      <li>Provide API for LCSH Vector datastore</li>
+                      <li>Implement Vector datastore for FOLIO</li>
+                      <li>Implement Vector datastore for Sinopia</li>
+                      
+                      
                     </ul>
                    </section>
                  </article>
                </div>
                <div class="col">
                  <h2>Documentation</h2>
+                 <article id="about" class="container">
+                   <header>
+                     <h3>About this App</h3>
+                   </header> 
+                   <section>
+                      The <em>Chatting with Catalogs</em> application is built as a static website using the 
+                      <a href="https://pyscript.net/">pyscript</a> that loads a Python 3.1x environment into your 
+                      web-browser through Webassembly. We use the following Python packages:
+                      <ul>
+                        <li><a href="https://docs.pydantic.dev/latest/">Pydantic</a></li>
+                        <li><a href="https://pymarc.readthedocs.io/en/latest/">Pymarc</a></li>
+                        <li><a href="https://rdflib.readthedocs.io/en/stable/">RDFLib</a></li>
+                      </ul>
+                   </section>
+                 </article>
                  <article id="openai-api" class="container">
                    <header>
                      <h3>OpenAI API</h3>
@@ -503,10 +523,10 @@
                     </ul>
                   </section>
                  </article>
-                 <article class="container">
+                 <!-- <article class="container">
                    <header>
                      <h3>Retrieval Augmented Generation (RAG)</h3>
-                   </header>
+                   </header> //-->
 
                  </article>
 
@@ -620,7 +640,7 @@
             <div class="mb-3">
               <label for="edgeAIURI" class="form-label">Edge AI API</label>
               <input type="text" class="form-control" id="edgeAIURI" placeholder="Enter URI to the Edge AI API" aria-describedby="edgeAIapiHelp">
-              <div id="edgeAIapiHelp" class="form-text">This Edge AI API connets to either a local or remote API endpoint.</div>
+              <div id="edgeAIapiHelp" class="form-text">This Edge AI API connects to either a local or remote API endpoint.</div>
             </div>
             <button type="button"
                     data-bs-dismiss="modal"
@@ -794,7 +814,7 @@
   </div>
      
   </div>
-  <footer class="p-3 mb-5 rounded">
+  <footer class="p-2 rounded bg-secondary-subtle">
    <small>
    <p>
      An experimental Chat application by AI4LAM Metadata Working Group.

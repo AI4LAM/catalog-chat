@@ -67,7 +67,12 @@ def services():
     # auto_vendor_marc_li = document.createElement("li")
     # auto_vendor_marc_li.innerHTML = "Load Vendor MARC Records"
     # folio_services_ol.appendChild(auto_vendor_marc_li)
-    modal_body.innerHTML = "Logged into FOLIO"
+    h4 = document.createElement("h4")
+    h4.innerHTML = "Logged into FOLIO"
+    modal_body.appendChild(h4)
+    div_logout = document.createElement("div")
+    div_logout.innerHTML = """<button class="btn btn-primary" py-script="okapi=logout_folio()" data-bs-dismiss="modal">Log out</button>"""
+    modal_body.appendChild(div_logout)
 
 
 # Goal 1: Automate loading of vendor MARC records
@@ -110,6 +115,9 @@ async def login(okapi: Okapi):
         folio_button = document.getElementById("folioButton")
         folio_button.classList.remove("btn-outline-danger")
         folio_button.classList.add("btn-outline-success")
+        default_folio = document.getElementById("folio-default")
+        if not "d-none" in default_folio.classList:
+            default_folio.classList.add("d-none")
         localStorage.setItem("okapi", okapi.json())
         services()
     else:
@@ -125,6 +133,7 @@ async def load_marc_record(marc_file):
         )
         marc_record = next(marc_reader)
         return str(marc_record)
+
 
 
 async def get_instance(okapi, uuid):
@@ -216,5 +225,41 @@ async def get_instance_types() -> dict:
     return output
 
 def load_instance(url):
+    default_folio = document.getElementById("folio-default")
+    if not "d-none" in default_folio.classList:
+        default_folio.classList.add("d-none")
     folio_iframe = document.getElementById("folio-system-frame")
-    folio_iframe.src = url    
+    folio_iframe.src = url 
+
+def logout_folio():
+    modal_body = document.getElementById("folioModalBody")
+    modal_label = document.getElementById("folioModalLabel")
+    modal_label.innerHTML = "Login to FOLIO"
+    modal_body ="""<form>
+    <div class="mb-3">
+      <label for="folioURI" class="form-label">FOLIO URI</label>
+        <input class="form-control" id="folioURI">
+    </div>
+    <div class="mb-3">
+      <label for="okapiURI" class="form-label">Okapi URI</label>
+      <input class="form-control" id="okapiURI">
+    </div>
+    <div class="mb-3">
+      <label for="folioTenant" class="form-label">Tenant</label>
+      <input class="form-control" id="folioTenant">
+    </div>
+    <div class="mb-3">
+      <label for="folioUser" class="form-label">Username</label>
+      <input class="form-control" id="folioUser">
+    </div>
+    <div class="mb-3">
+      <label for="folioPassword" class="form-label">Password</label>
+      <input type="password" class="form-control" id="folioPassword">
+    </div>
+    <button type="button"
+      data-bs-dismiss="modal"
+      class="btn btn-primary"
+      py-click="asyncio.ensure_future(login_okapi())">Login</button>
+   </form>"""
+    return None
+  

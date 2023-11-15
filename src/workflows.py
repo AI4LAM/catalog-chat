@@ -81,6 +81,23 @@ class FOLIOWorkFlow(WorkFlow):
         if self.instance_types is None:
             self.instance_types = await get_instance_types()
 
+    def __update_record__(self, record):
+        record["instanceTypeId"] = self.instance_types.get("unspecified")
+        for identifier in record.get("identifiers", []):
+            if "identifierTypeName" in identifier:
+                ident_name = identifier.pop("identifierTypeName")
+                if ident_name.upper().startswith("OCLC"):
+                    ident_name = "OCLC"
+                identifier["identifierTypeId"] = self.identifier_types.get(ident_name)
+        
+        for contributor in record.get("contributors", []):
+            contributor["contributorTypeId"] = self.contributor_types.get(
+                contributor.get("contributorTypeText", "Contributor")
+            )
+            contributor[
+                "contributorNameTypeId"
+            ] = self.contributor_name_types.get("Personal name")
+
 
 class AssignLCSH(WorkFlow):
     name = "Assign Library of Congress Subject Heading to record"
@@ -176,22 +193,6 @@ to a FOLIO Instance JSON record
         super().__init__()
         self.zero_shot = zero_shot
 
-    def __update_record__(self, record):
-        record["instanceTypeId"] = self.instance_types.get("unspecified")
-        for identifier in record.get("identifiers", []):
-            if "identifierTypeName" in identifier:
-                ident_name = identifier.pop("identifierTypeName")
-                if ident_name.upper().startswith("OCLC"):
-                    ident_name = "OCLC"
-                identifier["identifierTypeId"] = self.identifier_types.get(ident_name)
-        
-        for contributor in record.get("contributors", []):
-            contributor["contributorTypeId"] = self.contributor_types.get(
-                contributor.get("contributorTypeText", "Contributor")
-            )
-            contributor[
-                "contributorNameTypeId"
-            ] = self.contributor_name_types.get("Personal name")
 
 
 
@@ -220,7 +221,7 @@ to a FOLIO Instance JSON record
         add_history(chat_result, "response")
         function_name = function_call.get("name")
         args = json.loads(function_call.get("arguments"), strict=False)
-        console.log(f"Function name {function_name} args: {args}")
+        #console.log(f"Function name {function_name} args: {args}")
         if function_name.startswith("add_instance"):
             record = args.get("record")
             if isinstance(record, str):
@@ -263,17 +264,9 @@ class NewResource(FOLIOWorkFlow):
         match function_name:
             case "add_instance":
                 record = json.loads(args.get("record"))
-                record["instanceTypeId"] = self.instance_types.get("unspecified")
-                for contributor in record.get("contributors", []):
-                    contributor["contributorTypeId"] = self.contributor_types.get(
-                        contributor.get("contributorTypeText"),
-                        "Contributor"
-                    )
-                    contributor[
-                        "contributorNameTypeId"
-                    ] = self.contributor_name_types.get("Personal name")
-                    instance_url = await add_instance(json.dumps(record))
-                    output = instance_url
+                self.__update_record__(record)
+                instance_url = await add_instance(json.dumps(record))
+                output = instance_url
 
             case "load_instance":
                 instance_url = json.loads(args.get("instance_url"))
@@ -357,8 +350,42 @@ and convert it to a FOLIO Instance JSON record"""
         super().__init__()
         self.zero_shot = zero_shot
 
+
+
+    async def __handle_func__(self, function_call) -> str:
+        function_name = function_call.get("name")
+        args = json.loads(function_call.get("arguments"))
+        output = None
+        match function_name:
+
+            case "add_instance":
+   
+                record = json.loads(args.get("record"))
+                self.__update_record__(record)
+                #console.log(f"SinopiaToFOLIO {record}")
+                instance_url = await add_instance(json.dumps(record))
+                #console.log(f"After SinopiaToFOLIO func call {instance_url}")
+                output = instance_url
+
+            case "load_sinopia":
+                sinopia_rdf = await load_sinopia(args.get("resource_url"))
+                prompt = "Create a FOLIO Instance JSON record from" 
+                add_history(f"{prompt}<pre>{sinopia_rdf}</pre>", "prompt")
+                output = f"{prompt}\n{sinopia_rdf}"
+
+            case _:
+                output = f"Unknown function {function_name}"
+
+
+        return output
+    
+
     async def system(self):
         system_prompt = SinopiaToFOLIO.system_prompt
+
+        if self.instance_types is None:
+            await self.get_types()
+
 
         if self.zero_shot is False:
             system_prompt = f"{system_prompt}\n\nExamples"
@@ -373,11 +400,13 @@ and convert it to a FOLIO Instance JSON record"""
         add_history(chat_result, "response")
         function_call = chat_result["choices"][0]["message"].get("function_call")
         if function_call:
-            function_name = function_call.get("name")
-            args = json.loads(function_call.get("arguments"))
-            if function_name == "load_sinopia":
-                sinopia_rdf = await load_sinopia(args.get("resource_url"))
-                add_history(f"<pre>{sinopia_rdf}</pre>", "prompt")
-                chat_result_rdf = await chat_instance(sinopia_rdf)
-                add_history(chat_result_rdf, "response") 
- 
+            first_result = await self.__handle_func__(function_call)
+            chat_result_rdf = await chat_instance(first_result)
+            final_func_call = chat_result_rdf["choices"][0]["message"].get("function_call")
+            final_result = await self.__handle_func__(final_func_call)
+            # console.log(f"The final result {final_result}")
+            add_history(chat_result_rdf, "response")
+            load_instance(final_result)
+
+            return final_result
+        return "Workflow finished without completing"
