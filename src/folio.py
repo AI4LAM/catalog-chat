@@ -41,6 +41,7 @@ def error_card(errors, okapi):
     card_html += """</div>
       <div class="card-footer">FOLIO server {okapi.folio} Okapi API {okapi.urll}</div>
     </div>"""
+    row_div = document.createElement("div")
     if prompt_history.hasChildNodes():
         prompt_history.insertBefore(row_div, prompt_history.firstChild)
     else:
@@ -168,7 +169,7 @@ async def add_instance(record):
         return f"""{okapi.folio}/inventory/view/{instance["id"]}"""
     else:
         console.log(f"Error adding {instance_response}")
-        error_card(instance_response, okapi)
+        error_card(instance_response.json()["errors"], okapi)
         return instance_response
 
 

@@ -96,6 +96,11 @@
         folio_btn = document.getElementById("folioButton")
         folio_btn.classList.remove("btn-outline-danger")
         folio_btn.classList.add("btn-outline-success")
+        folio_iframe = document.getElementById("folio-system-frame")
+        folio_iframe.src = okapi.folio
+        default_folio = document.getElementById("folio-default")
+        default_folio.classList.add("d-none")
+        
         
 
     marc_file = Element("marc-upload-btn")
@@ -178,9 +183,7 @@
      </div>
      <div class="col-2">
       <img src="imgs/hexsticker.png" alt="AI4LAM Hex Sticker and Logo" style="height: 100px;">
-      <div>
-       <small class="align-middle">Bugs? Ideas for improving? Please add a ticket <a href="https://github.com/AI4LAM/catalog-chat/issues" target="_blank">here</a>.</small>
-      </div>
+      
      </div>
    </div>
     <div class="row">
@@ -349,14 +352,17 @@
                     <li>
                       <a href="#" py-click="asyncio.ensure_future(load_workflow('transform-bf-folio'))">Transform Sinopia BIBFRAME to FOLIO Inventory</a>
                     </li>
-                    <li>
+                    <li class="">
                       <a href="#" py-click="asyncio.ensure_future(load_workflow('add-lcsh'))">Add LCSH to Sinopia RDF or FOLIO Records</a>
                     </li>
                     <li>
                       <a href="#" py-click="asyncio.ensure_future(load_workflow('marc-to-folio'))">Upload a MARC Record to create a FOLIO Inventory Record</a>
                     </li>
                   </ul>
-                  <div>
+                  <div class="mt-2 alert alert-info w-75">
+                   <small class="align-middle">Bugs? Ideas for improvment? Please add a ticket <a href="https://github.com/AI4LAM/catalog-chat/issues" target="_blank">here</a>.</small>
+                  </div>
+                  <div class="">
                     <h2>Vector stores</h2>
 	            <p>
                       To improve the context of the chat and reduce model hallucinations, 
@@ -814,7 +820,7 @@
   </div>
      
   </div>
-  <footer class="p-2 rounded bg-secondary-subtle">
+  <footer class="p-2 mt-2 rounded bg-secondary-subtle">
    <small>
    <p>
      An experimental Chat application by AI4LAM Metadata Working Group.

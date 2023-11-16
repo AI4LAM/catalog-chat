@@ -359,17 +359,16 @@ and convert it to a FOLIO Instance JSON record"""
         match function_name:
 
             case "add_instance":
-   
                 record = json.loads(args.get("record"))
                 self.__update_record__(record)
-                #console.log(f"SinopiaToFOLIO {record}")
+                console.log(f"SinopiaToFOLIO after update")
                 instance_url = await add_instance(json.dumps(record))
-                #console.log(f"After SinopiaToFOLIO func call {instance_url}")
+                console.log(f"After SinopiaToFOLIO func call {instance_url}")
                 output = instance_url
 
             case "load_sinopia":
                 sinopia_rdf = await load_sinopia(args.get("resource_url"))
-                prompt = "Create a FOLIO Instance JSON record from" 
+                prompt = "Add FOLIO Instance JSON record from" 
                 add_history(f"{prompt}<pre>{sinopia_rdf}</pre>", "prompt")
                 output = f"{prompt}\n{sinopia_rdf}"
 
@@ -401,8 +400,10 @@ and convert it to a FOLIO Instance JSON record"""
         function_call = chat_result["choices"][0]["message"].get("function_call")
         if function_call:
             first_result = await self.__handle_func__(function_call)
+            console.log(f"First result")
             chat_result_rdf = await chat_instance(first_result)
             final_func_call = chat_result_rdf["choices"][0]["message"].get("function_call")
+            console.log(f"Final func {final_func_call}")
             final_result = await self.__handle_func__(final_func_call)
             # console.log(f"The final result {final_result}")
             add_history(chat_result_rdf, "response")
