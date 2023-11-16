@@ -352,9 +352,9 @@
                     <li>
                       <a href="#" py-click="asyncio.ensure_future(load_workflow('transform-bf-folio'))">Transform Sinopia BIBFRAME to FOLIO Inventory</a>
                     </li>
-                    <li class="">
+                    <!-- <li class="">
                       <a href="#" py-click="asyncio.ensure_future(load_workflow('add-lcsh'))">Add LCSH to Sinopia RDF or FOLIO Records</a>
-                    </li>
+                    </li> //-->
                     <li>
                       <a href="#" py-click="asyncio.ensure_future(load_workflow('marc-to-folio'))">Upload a MARC Record to create a FOLIO Inventory Record</a>
                     </li>
@@ -377,7 +377,7 @@
                       <label class="form-check-label" for="sinopia-vector-db">Sinopia RDF</label>
                      </div>
                      <div class="form-check"> 
-                      <input class="form-check-input" type="checkbox" value="" id="lcsh-vector-db"></input>
+                      <input class="form-check-input" type="checkbox" value="" disabled id="lcsh-vector-db"></input>
                       <label class="form-check-label" for="lcsh-vector-db">Library of Congress Subject Headings (LCSH)</label>
                      </div>
                   </div>
@@ -473,7 +473,7 @@
                    </header> 
                    <section>
                       The <em>Chatting with Catalogs</em> application is built as a static website using the 
-                      <a href="https://pyscript.net/">pyscript</a> that loads a Python 3.1x environment into your 
+                      <a href="https://pyscript.net/">pyscript</a> that loads a Python 3.11 environment into your 
                       web-browser through Webassembly. We use the following Python packages:
                       <ul>
                         <li><a href="https://docs.pydantic.dev/latest/">Pydantic</a></li>

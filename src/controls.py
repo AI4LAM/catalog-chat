@@ -106,7 +106,7 @@ async def init_workflow(workflow_slug):
 
         case "bf-to-marc":
             msg = "Generate a MARC Record from Sinopia BIBFRAME RDF"
-            lcsh_vector_chkbox.checked = True
+            # lcsh_vector_chkbox.checked = True
             # sinopia_vector_chkbox.checked = True
             workflow = "bf_to_marc"
 
@@ -117,7 +117,7 @@ async def init_workflow(workflow_slug):
 
         case "new-resource":
             # folio_vector_chkbx.checked = True
-            lcsh_vector_chkbox.checked = True
+            # lcsh_vector_chkbox.checked = True
             # sinopia_vector_chkbox.checked = True
             workflow = NewResource(zero_shot=True)
             msg = workflow.name
