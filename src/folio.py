@@ -10,9 +10,10 @@ from typing import Optional
 from pydantic import BaseModel
 from pyodide.http import pyfetch
 
-from js import console, document, JSON, Headers, localStorage, alert
+from js import console, document, JSON, Headers, sessionStorage, alert
 
 from chat import add_history
+
 
 class Okapi(BaseModel):
     folio: str = ""
@@ -46,12 +47,10 @@ async def error_card(errors, okapi):
         prompt_history.insertBefore(row_div, prompt_history.firstChild)
     else:
         prompt_history.appendChild(row_div)
-    
 
-   
 
 def _get_okapi():
-    existing_okapi = localStorage.getItem("okapi")
+    existing_okapi = sessionStorage.getItem("okapi")
     if existing_okapi is None:
         alert("Missing Okapi")
         return None
@@ -119,7 +118,7 @@ async def login(okapi: Okapi):
         default_folio = document.getElementById("folio-default")
         if not "d-none" in default_folio.classList:
             default_folio.classList.add("d-none")
-        localStorage.setItem("okapi", okapi.json())
+        sessionStorage.setItem("okapi", okapi.json())
         services()
     else:
         console.log(f"Failed to log into Okapi {login_response}")
@@ -134,7 +133,6 @@ async def load_marc_record(marc_file):
         )
         marc_record = next(marc_reader)
         return str(marc_record)
-
 
 
 async def get_instance(okapi, uuid):
@@ -159,7 +157,7 @@ async def add_instance(record):
         "mode": "cors",
         "body": record,
     }
-    #console.log(f"Add Instance kwargs {kwargs}")
+    # console.log(f"Add Instance kwargs {kwargs}")
     instance_response = await pyfetch(
         f"{okapi.url}/instance-storage/instances", **kwargs
     )
@@ -187,7 +185,14 @@ async def get_types(endpoint, selected_types, type_key, name_key="name"):
 
 
 async def get_contributor_types() -> dict:
-    selected_types = ["Actor", "Author", "Contributor", "Editor", "Narrator", "Publisher"]
+    selected_types = [
+        "Actor",
+        "Author",
+        "Contributor",
+        "Editor",
+        "Narrator",
+        "Publisher",
+    ]
     output = await get_types(
         "/contributor-types?limit=500", selected_types, "contributorTypes"
     )
@@ -225,18 +230,20 @@ async def get_instance_types() -> dict:
     )
     return output
 
+
 def load_instance(url):
     default_folio = document.getElementById("folio-default")
     if not "d-none" in default_folio.classList:
         default_folio.classList.add("d-none")
     folio_iframe = document.getElementById("folio-system-frame")
-    folio_iframe.src = url 
+    folio_iframe.src = url
+
 
 def logout_folio():
     modal_body = document.getElementById("folioModalBody")
     modal_label = document.getElementById("folioModalLabel")
     modal_label.innerHTML = "Login to FOLIO"
-    modal_body ="""<form>
+    modal_body = """<form>
     <div class="mb-3">
       <label for="folioURI" class="form-label">FOLIO URI</label>
         <input class="form-control" id="folioURI">
@@ -263,4 +270,3 @@ def logout_folio():
       py-click="asyncio.ensure_future(login_okapi())">Login</button>
    </form>"""
     return None
-  

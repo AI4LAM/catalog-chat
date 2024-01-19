@@ -46,7 +46,7 @@
     # Hack to load rdflib
     setattr(sys.stderr, 'isatty', lambda : True)
 
-    from js import alert, console, document, localStorage
+    from js import alert, console, document, sessionStorage
 
     from chat import (
         add_history,
@@ -77,7 +77,7 @@
     version_span.innerHTML = __version__
 
     chat_gpt_instance = None
-    existing_token = localStorage.getItem("chat_gpt_token")
+    existing_token = sessionStorage.getItem("chat_gpt_token")
     if existing_token:
         chat_gpt_instance = ChatGPT(key=existing_token)
         update_chat_modal(chat_gpt_instance)
@@ -90,7 +90,7 @@
 
 
     okapi = None
-    existing_okapi = localStorage.getItem("okapi")
+    existing_okapi = sessionStorage.getItem("okapi")
     if existing_okapi:
         okapi = Okapi.parse_obj(json.loads(existing_okapi))
         folio_btn = document.getElementById("folioButton")

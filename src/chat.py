@@ -10,7 +10,7 @@ import re
 import uuid
 
 from typing import Optional
-from js import console, document, localStorage, window
+from js import console, document, sessionStorage, window
 
 from pyodide.http import pyfetch
 
@@ -99,9 +99,9 @@ def add_history(value, type_of):
 
 
 def delete_key():
-    localStorage.removeItem("chat_gpt_token")
+    sessionStorage.removeItem("chat_gpt_token")
     window.location.reload()
-    
+
 
 async def login():
     bearer_key_element = document.getElementById("chatApiKey")
@@ -109,8 +109,8 @@ async def login():
     chatgpt_button = document.getElementById("chatGPTButton")
     chatgpt_button.classList.remove("btn-outline-danger")
     chatgpt_button.classList.add("btn-outline-success")
-    #chat_prompts_div = document.getElementById("chat-gpt-prompts")
-    #chat_prompts_div.classList.remove("d-none")
+    # chat_prompts_div = document.getElementById("chat-gpt-prompts")
+    # chat_prompts_div.classList.remove("d-none")
     update_chat_modal(chat_gpt)
     return chat_gpt
 
@@ -135,13 +135,13 @@ class ChatGPT(object):
         self.max_tokens = max_tokens
         self.messages = []
         self.functions = None
-        localStorage.setItem("chat_gpt_token", key)
+        sessionStorage.setItem("chat_gpt_token", key)
 
     async def __call__(self, message):
         message = {"role": "user", "content": message}
         self.messages.append(message)
         result = await self.execute()
-        #console.log(f"Adding {result} to messages")
+        # console.log(f"Adding {result} to messages")
         self.messages.append(result["choices"][0]["message"])
         return result
 
@@ -208,6 +208,7 @@ def update_chat_modal(chat_gpt_instance):
     button_div = document.createElement("div")
     button_div.innerHTML = """<button class="btn btn-primary" py-click="delete_key()">Delete Key</button>"""
     modal_body.appendChild(button_div)
+
 
 action_re = re.compile(r"^Action: (\w+): (.*)$")
 
