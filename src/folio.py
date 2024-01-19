@@ -28,7 +28,7 @@ class Okapi(BaseModel):
         }
 
 
-def error_card(errors, okapi):
+async def error_card(errors, okapi):
     prompt_history = document.getElementById("chat-history")
     created_at = datetime.datetime.utcnow()
     card_html = f"""<div id="{uuid.uuid4()}" class="card mb-3">
@@ -169,7 +169,7 @@ async def add_instance(record):
         return f"""{okapi.folio}/inventory/view/{instance["id"]}"""
     else:
         console.log(f"Error adding {instance_response}")
-        error_card(instance_response.json()["errors"], okapi)
+        await error_card(instance_response.json()["errors"], okapi)
         return instance_response
 
 
