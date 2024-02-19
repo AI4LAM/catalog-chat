@@ -115,6 +115,23 @@ async def login():
     return chat_gpt
 
 
+def update_parameters(chat_gpt_instance):
+    endpoint_elem = document.getElementById("chat-endpoint")
+    if endpoint_elem.value != chat_gpt_instance.openai_url:
+        chat_gpt_instance.openai_url = endpoint_elem.value
+    model_elem = document.getElementById("chat-model")
+    if model_elem.value != chat_gpt_instance.model:
+        chat_gpt_instance.model = model_elem.value
+    temp_elem = document.getElementById("chat-temperature")
+    if float(temp_elem.value) != chat_gpt_instance.temperature:
+        chat_gpt_instance.temperature = float(temp_elem.value)
+    max_tokens_elem = document.getElementById("chat-max-tokens")
+    if int(max_tokens_elem.value) != chat_gpt_instance.max_tokens:
+        chat_gpt_instance.max_tokens = int(max_tokens_elem.value)
+    
+    
+    
+
 class ChatGPT(object):
     def __init__(
         self,
@@ -176,6 +193,20 @@ class ChatGPT(object):
         return result
 
 
+
+def _select_model(model):
+    output = """<select id="chat-model" class="form-control">"""
+    models = ["gpt-3.5-turbo", "gpt-4"]
+    options = ""
+    for row in models:
+        option = f"""<option value="{row}" """
+        if row == model:
+            option += "selected "
+        options += f"""{option}>{row}</option>\n"""
+    output += f"{options}\n</select>"
+    console.log(output)
+    return output
+
 def update_chat_modal(chat_gpt_instance):
     modal_body = document.getElementById("chatApiKeyModalBody")
     modal_body.innerHTML = ""
@@ -184,30 +215,35 @@ def update_chat_modal(chat_gpt_instance):
     endpoint_dt.innerHTML = "OpenAI Endpoint"
     instance_dl.appendChild(endpoint_dt)
     endpoint_dd = document.createElement("dd")
-    endpoint_dd.innerHTML = chat_gpt_instance.openai_url
+    endpoint_dd.innerHTML = f"""<input class="form-control" id="chat-endpoint"
+    value="{chat_gpt_instance.openai_url}"></input>"""
     instance_dl.appendChild(endpoint_dd)
     model_dt = document.createElement("dt")
     model_dt.innerHTML = "Model"
     instance_dl.appendChild(model_dt)
     model_dd = document.createElement("dd")
-    model_dd.innerHTML = chat_gpt_instance.model
+    model_dd.innerHTML = _select_model(chat_gpt_instance.model)    
     instance_dl.appendChild(model_dd)
     temp_dt = document.createElement("dt")
     temp_dt.innerHTML = "Temperature"
     instance_dl.appendChild(temp_dt)
     temp_dd = document.createElement("dd")
-    temp_dd.innerHTML = chat_gpt_instance.temperature
+    temp_dd.innerHTML = f"""<input class="form-control" id="chat-temperature" 
+      value="{chat_gpt_instance.temperature}"></input>"""
     instance_dl.appendChild(temp_dd)
     modal_body.appendChild(instance_dl)
     max_tokens_dt = document.createElement("dt")
     max_tokens_dt.innerHTML = "Max Tokens"
     instance_dl.appendChild(max_tokens_dt)
     max_tokens_dd = document.createElement("dd")
-    max_tokens_dd.innerHTML = chat_gpt_instance.max_tokens
+    max_tokens_dd.innerHTML = f"""<input class="form-control" id="chat-max-tokens" 
+      value="{chat_gpt_instance.max_tokens}"></input>"""
     instance_dl.appendChild(max_tokens_dd)
-    button_div = document.createElement("div")
-    button_div.innerHTML = """<button class="btn btn-primary" py-click="delete_key()">Delete Key</button>"""
-    modal_body.appendChild(button_div)
+    buttons_div = document.createElement("div")
+    buttons_div.innerHTML = """<button class="btn btn-primary" data-bs-dismiss="modal"
+      py-click="update_parameters(chat_gpt_instance)">Update</button>
+    <button class="btn btn-danger" py-click="delete_key()">Delete Key</button>"""
+    modal_body.appendChild(buttons_div)
 
 
 action_re = re.compile(r"^Action: (\w+): (.*)$")

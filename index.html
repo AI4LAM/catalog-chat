@@ -37,7 +37,7 @@
 </head>
 <body>
   <py-script>
-    __version__ = "0.0.1"
+    __version__ = "0.0.2"
 
     import asyncio
     import json
@@ -51,7 +51,8 @@
     from chat import (
         add_history,
         delete_key,
-        update_chat_modal
+        update_chat_modal,
+        update_parameters
     )
 
     from chat import login as chat_gpt_login, ChatGPT
