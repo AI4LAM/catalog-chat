@@ -26,7 +26,7 @@
    
   </style>
  <py-config type="toml">
-  packages = ["pydantic", "./wheels/pymarc-4.2.2-py3-none-any.whl", "./wheels/rdflib-6.3.1-py3-none-any.whl",]
+  packages = ["pydantic", "./wheels/pymarc-4.2.2-py3-none-any.whl", "./wheels/rdflib-7.0.0-py3-none-any.whl",]
 
   [[fetch]]
   from = "src"
@@ -42,9 +42,6 @@
     import asyncio
     import json
     import sys
-
-    # Hack to load rdflib
-    setattr(sys.stderr, 'isatty', lambda : True)
 
     from js import alert, console, document, sessionStorage
 
