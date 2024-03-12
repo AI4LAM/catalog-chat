@@ -67,8 +67,8 @@ def load_folio_default():
     password = document.getElementById("folioPassword")
     folio_default = document.getElementById("folio-default")
 
-    folio_url.value = "https://folio-nolana.dev.folio.org"
-    okapi_url.value = "https://folio-nolana-okapi.dev.folio.org"
+    folio_url.value = "https://folio-orchid.dev.folio.org"
+    okapi_url.value = "https://folio-orchid-okapi.dev.folio.org"
     tenant.value = "diku"
     user.value = "diku_admin"
     password.value = "admin"

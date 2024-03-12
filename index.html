@@ -26,10 +26,10 @@
    
   </style>
  <py-config type="toml">
-  packages = ["pydantic", "./wheels/pymarc-4.2.2-py3-none-any.whl", "./wheels/rdflib-7.0.0-py3-none-any.whl",]
+  packages = ["pydantic", "./wheels/pymarc-4.2.2-py3-none-any.whl", "./wheels/rdflib-7.0.0-py3-none-any.whl"]
 
   [[fetch]]
-  from = "src"
+  from = "src/catalog_chat"
   files = ["chat.py", "controls.py", "folio.py", "github.py", "sinopia.py", "workflows.py"]
 
   
@@ -37,7 +37,7 @@
 </head>
 <body>
   <py-script>
-    __version__ = "0.0.2"
+    __version__ = "0.0.3"
 
     import asyncio
     import json
@@ -399,9 +399,9 @@
                <p>To use the FOLIO Demo site, use the following credentials:</p>
                <dl>
                  <dt>FOLIO URL:</dt>
-                 <dd><a href="https://folio-nolana.dev.folio.org">https://folio-nolana.dev.folio.org</a></dd>
+                 <dd><a href="https://folio-orchid.dev.folio.org">https://folio-orchid.dev.folio.org</a></dd>
                  <dt>Okapi URL:</dt>
-                 <dd><a href="https://folio-nolana-okapi.dev.folio.org/">https://folio-nolana-okapi.dev.folio.org/</a></dd>
+                 <dd><a href="https://folio-orchid-okapi.dev.folio.org/">https://folio-orchid-okapi.dev.folio.org//</a></dd>
                  <dt>Tenant:</dt>
                  <dd>diku</dd>
                  <dt>Login:</dt>
