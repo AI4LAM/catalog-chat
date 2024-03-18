@@ -30,7 +30,8 @@
 
   [[fetch]]
   from = "src/catalog_chat"
-  files = ["chat.py", "controls.py", "folio.py", "github.py", "sinopia.py", "workflows.py"]
+  files = ["chat.py", "controls.py", "folio.py", "github.py", "sinopia.py", "workflows/__init__.py", "workflows/assign_lcsh.py", "workflows/marc21_to_folio.py", "workflows/new_folio_resource.py", "workflows/sinopia_to_folio.py"]
+
 
   
  </py-config>
@@ -67,9 +68,6 @@
 
     from folio import Okapi, get_instance, logout_folio
     from folio import login as okapi_login
-
-    from workflows import AssignLCSH, MARC21toFOLIO, NewResource
-    
 
     version_span = document.getElementById("version")
     version_span.innerHTML = __version__

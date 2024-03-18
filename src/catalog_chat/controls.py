@@ -8,7 +8,10 @@ import pymarc
 from js import Blob, console, document, alert, JSON, URL
 
 from chat import add_history
-from workflows import AssignLCSH, NewResource, MARC21toFOLIO, SinopiaToFOLIO
+from workflows.assign_lcsh import AssignLCSH
+from workflows.marc21_to_folio import MARC21toFOLIO
+from workflows.new_folio_resource import NewResource 
+from workflows.sinopia_to_folio import SinopiaToFOLIO
 
 
 def clear_chat_prompt(chat_gpt_instance):
@@ -76,7 +79,7 @@ def load_folio_default():
     folio_default.classList.add("d-none")
 
 
-async def init_workflow(workflow_slug):
+async def init_workflow(workflow_slug, chat_instanace):
     workflow_title_h2 = document.getElementById("workflow-title")
     chat_prompt_textarea = document.getElementById("mainChatPrompt")
     folio_vector_chkbx = document.getElementById("folio-vector-db")
@@ -101,7 +104,7 @@ async def init_workflow(workflow_slug):
     match workflow_slug:
         case "add-lcsh":
             lcsh_vector_chkbox.checked = True
-            workflow = AssignLCSH(zero_shot=True)
+            workflow = AssignLCSH(zero_shot=True, chat_instance=chat_instance)
             msg = workflow.name
 
         case "bf-to-marc":
