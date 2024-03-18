@@ -5,6 +5,7 @@ import time
 
 from js import console, document
 
+from paradag import DAG
 
 from chat import add_history, prompt_base, ChatGPT
 
@@ -54,7 +55,7 @@ load_sinopia_sig = {
     }
 }
 
-class WorkFlow(object):
+class WorkFlow(DAG):
     name: str = ""
     system: str = ""
     examples: list = []
