@@ -38,7 +38,7 @@
 </head>
 <body>
   <py-script>
-    __version__ = "0.0.3"
+    __version__ = "1.0.0"
 
     import asyncio
     import json
@@ -108,9 +108,9 @@
         else:
             alert("Need chat gpt instance and workflow to download history")
 
-    async def load_workflow(workflow_slug):
+    def load_workflow(workflow_slug):
         global workflow
-        workflow = await init_workflow(workflow_slug)
+        workflow = init_workflow(workflow_slug)
 
 
     async def login_chatgpt():
@@ -343,7 +343,7 @@
                   </p>
                   <ul>
                     <li>
-                      <a href="#" py-click="asyncio.ensure_future(load_workflow('new-resource'))">Catalog a New Resource by Chat</a>
+                      <a href="#" py-click="load_workflow('new-resource')">Catalog a New Resource by Chat</a>
                     </li>
                     <li>
                       <a href="#" py-click="asyncio.ensure_future(load_workflow('transform-bf-folio'))">Transform Sinopia BIBFRAME to FOLIO Inventory</a>
@@ -437,7 +437,10 @@
                    </header>
                    <p>
                      Workflows in this app are inspired by <a href="https://airflow.apache.org/">Apache Airflow</a> and 
-                     <a href="https://www.prefect.io/">Prefect.io</a>. A workflow wraps LLM API calls along with calling 
+                     <a href="https://www.prefect.io/">Prefect.io</a> use of 
+                     <a href="https://en.wikipedia.org/wiki/Directed_acyclic_graph">DAGs (Directed Acyclic Graphs)</a>. 
+                     Catalog Chat uses the pure-python package, <a href="https://github.com/xianghuzhao/paradag/">paradag</a>, 
+                     to construct workflows as a DAG. A workflow wraps LLM API calls along with calling 
                      specific FOLIO Okapi and Sinopia APIs by building context and examples specific to the use case. 
                    </p>
                    <img src="imgs/workflow-flowchart.png" alt="Basic Cataloging Workflow Flowchart" />
@@ -472,6 +475,7 @@
                       <a href="https://pyscript.net/">pyscript</a> project that loads a Python 3.11 environment into your 
                       web-browser through Webassembly. We use the following Python packages:
                       <ul>
+                        <li><a href="https://github.com/xianghuzhao/paradag/">Paradag</a></li>
                         <li><a href="https://docs.pydantic.dev/latest/">Pydantic</a></li>
                         <li><a href="https://pymarc.readthedocs.io/en/latest/">Pymarc</a></li>
                         <li><a href="https://rdflib.readthedocs.io/en/stable/">RDFLib</a></li>

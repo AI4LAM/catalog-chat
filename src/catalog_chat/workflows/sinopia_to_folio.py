@@ -78,18 +78,14 @@ and convert it to a FOLIO Instance JSON record"""
         return output
     
 
-    async def system(self):
-        system_prompt = SinopiaToFOLIO.system_prompt
+    #async def system(self):
+    #    system_prompt = SinopiaToFOLIO.system_prompt
 
-        if self.instance_types is None:
-            await self.get_types()
+    #    if self.zero_shot is False:
+    #        system_prompt = f"{system_prompt}\n\nExamples"
+    #        system_prompt += "\n".join(self.examples)
 
-
-        if self.zero_shot is False:
-            system_prompt = f"{system_prompt}\n\nExamples"
-            system_prompt += "\n".join(self.examples)
-
-        return system_prompt
+    #    return system_prompt
 
     async def run(self, chat_instance: ChatGPT, initial_prompt: str):
         add_history(initial_prompt, "prompt")

@@ -10,7 +10,7 @@ from js import Blob, console, document, alert, JSON, URL
 from chat import add_history
 from workflows.assign_lcsh import AssignLCSH
 from workflows.marc21_to_folio import MARC21toFOLIO
-from workflows.new_folio_resource import NewResource 
+from workflows.new_folio_resource import NewResource
 from workflows.sinopia_to_folio import SinopiaToFOLIO
 
 
@@ -36,28 +36,27 @@ def clear_chat_prompt(chat_gpt_instance):
 def download(chat_instance, workflow):
     export_obj = {
         "chat_instance": {
-           "endpoint": chat_instance.openai_url,
-           "model": chat_instance.model,
-           "temperature": chat_instance.temperature,
-           "messages": chat_instance.messages,
-           "functions": chat_instance.functions
+            "endpoint": chat_instance.openai_url,
+            "model": chat_instance.model,
+            "temperature": chat_instance.temperature,
+            "messages": chat_instance.messages,
+            "functions": chat_instance.functions,
         },
-        "workflow": {
-           "name": workflow.name
-        }
+        "workflow": {"name": workflow.name},
     }
     anchor = document.createElement("a")
-    blob = Blob.new([json.dumps(export_obj, indent=2)], { "type": 'application/json' })
+    blob = Blob.new([json.dumps(export_obj, indent=2)], {"type": "application/json"})
     anchor.href = URL.createObjectURL(blob)
     current = datetime.datetime.utcnow()
-    anchor.download =  f"export-{current.isoformat()}.json"
+    anchor.download = f"export-{current.isoformat()}.json"
     document.body.appendChild(anchor)
     anchor.click()
     document.body.removeChild(anchor)
     # download_btn.removeChild(anchor)
 
+
 def load_chat_session(page_name):
-    iframe_chat = document.getElementById('chat-gpt-session')
+    iframe_chat = document.getElementById("chat-gpt-session")
     iframe_chat.src = f"history/{page_name}.html"
 
 
@@ -79,7 +78,7 @@ def load_folio_default():
     folio_default.classList.add("d-none")
 
 
-async def init_workflow(workflow_slug, chat_instanace):
+def init_workflow(workflow_slug):
     workflow_title_h2 = document.getElementById("workflow-title")
     chat_prompt_textarea = document.getElementById("mainChatPrompt")
     folio_vector_chkbx = document.getElementById("folio-vector-db")
@@ -100,11 +99,10 @@ async def init_workflow(workflow_slug, chat_instanace):
     mrc_upload_btn = document.getElementById("marc-upload-btn")
     mrc_upload_btn.classList.add("d-none")
 
-
     match workflow_slug:
         case "add-lcsh":
             lcsh_vector_chkbox.checked = True
-            workflow = AssignLCSH(zero_shot=True, chat_instance=chat_instance)
+            workflow = AssignLCSH
             msg = workflow.name
 
         case "bf-to-marc":
@@ -115,30 +113,29 @@ async def init_workflow(workflow_slug, chat_instanace):
 
         case "marc-to-folio":
             mrc_upload_btn.classList.remove("d-none")
-            workflow = MARC21toFOLIO(zero_shot=True)
+            workflow = MARC21toFOLIO
             msg = workflow.name
 
         case "new-resource":
             # folio_vector_chkbx.checked = True
             # lcsh_vector_chkbox.checked = True
             # sinopia_vector_chkbox.checked = True
-            workflow = NewResource(zero_shot=True)
+            workflow = NewResource
             msg = workflow.name
 
         case "transform-bf-folio":
             # folio_vector_chkbx.checked = True
             # sinopia_vector_chkbox.checked = True
-            workflow = SinopiaToFOLIO(zero_shot=True)
+            workflow = SinopiaToFOLIO
             msg = workflow.name
 
         case _:
             msg = "None selected"
             workflow = None
 
-    # console.log(f"Workflow {workflow_slug} {workflow}")
     workflow_title_h2.innerHTML = f"<strong>Workflow:</strong> {msg}"
-    if hasattr(workflow, "system"):
-        system_result = await workflow.system()
+    if hasattr(workflow, "system_prompt"):
+        system_result = workflow.system_prompt
         system_div.innerHTML = f"""<textarea id="system-text" class="form-control" rows=5>{system_result}</textarea>"""
     if hasattr(workflow, "examples"):
         for i, example in enumerate(workflow.examples):
@@ -148,6 +145,7 @@ async def init_workflow(workflow_slug, chat_instanace):
                              
                                <textarea id="workflow-example-{i}" class="form-control" rows=3>{example}</textarea>"""
             examples_div.append(example_div)
+    console.log(f"Returning {workflow}")
     return workflow
 
 
@@ -173,34 +171,33 @@ def new_example():
     examples_div.appendChild(new_example_div)
 
 
-
-async def run_prompt(workflow, chat_gpt_instance):
+async def run_prompt(workflow_class, chat_gpt_instance):
     main_chat_textarea = document.getElementById("mainChatPrompt")
     loading_spinner = document.getElementById("chat-loading")
     loading_spinner.classList.remove("d-none")
 
-    #console.log(f"Workflow is {workflow}")
-    if workflow is None:
-        alert("Workflow is None")
-        
+    if workflow_class is None:
+        alert("Workflow is None, exiting")
         return
+    system_prompt_div = document.getElementById("system-text")
+    if system_prompt_div.value.strip() != workflow_class.system_prompt:
+        workflow_class.system_prompt = system_prompt_div.value.strip()
     prompt_examples_div = document.getElementById("prompt-examples")
     examples = []
     for check_box in prompt_examples_div.getElementsByTagName("input"):
         if check_box.checked:
             examples.append(check_box.nextElementSibling.value)
+    zero_shot = True
     if len(examples) > 0:
-        workflow.zero_shot = False
-        workflow.examples = examples
-  
-    system = await workflow.system()
-    await chat_gpt_instance.set_system(system)
+        zero_shot = False
+        workflow_class.examples = examples
+    workflow = workflow_class(chat_instance=chat_gpt_instance)
+    console.log(f"Workflow {workflow.system_prompt} {examples}")
     current = main_chat_textarea.value
     if len(current) > 0:
-        run_result = await workflow.run(chat_gpt_instance, current)
+        run_result = await workflow.run(current)
         loading_spinner.classList.add("d-none")
 
-        # console.log(f"Run result {run_result}")
         main_chat_textarea.value = ""
 
 

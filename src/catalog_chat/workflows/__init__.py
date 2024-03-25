@@ -4,6 +4,8 @@ import json
 import sys
 import time
 
+from typing import Union
+
 from js import console, document
 
 from paradag import DAG
@@ -33,8 +35,10 @@ class WorkFlowExecutor(object):
         if callable(param):
             args = self.__level.get(param)
             is_async = asyncio.iscoroutinefunction(param)
+            console.log(f"In execute {param} is async {is_async}")
             if args:
                 if is_async:
+                    console.log(f"Before async call with {args}")
                     return asyncio.ensure_future(param(args))
                 return param(args)
             else:
@@ -45,7 +49,13 @@ class WorkFlowExecutor(object):
             console.info(f"{param} is not callable")
 
     def deliver(self, vertex, result):
-        self.__level[vertex] = result 
+        console.log(
+            f"In deliver {vertex} {asyncio.iscoroutinefunction(vertex)} {result}"
+        )
+        if asyncio.iscoroutinefunction(vertex):
+            self.__level[vertex] = asyncio.ensure_future(result)
+        else:
+            self.__level[vertex] = result
 
 
 def task(*args):
@@ -53,10 +63,12 @@ def task(*args):
     Task Decorator mimics Airflow task decorator for use in pyscript
     """
     func = args[0]
+
     def wrapper(*args, **kwargs):
         func(*args[1:], **kwargs)
+
     return wrapper
-        
+
 
 add_instance_sig = {
     "name": "add_instance",
@@ -73,11 +85,11 @@ load_instance_sig = {
     "name": "load_instance",
     "description": "Loads an Instance to FOLIO iframe",
     "parameters": {
-      "type": "object",
-      "properties": {
-          "instance_url": {"type": "string", "description": "URL To a FOLIO Instance" }
-      }
-    }
+        "type": "object",
+        "properties": {
+            "instance_url": {"type": "string", "description": "URL To a FOLIO Instance"}
+        },
+    },
 }
 
 load_sinopia_sig = {
@@ -86,11 +98,14 @@ load_sinopia_sig = {
     "parameters": {
         "type": "object",
         "properties": {
-            "resource_url": {"type": "string", "description": "URL to a Sinopia Resource"}
-
-        }
-    }
+            "resource_url": {
+                "type": "string",
+                "description": "URL to a Sinopia Resource",
+            }
+        },
+    },
 }
+
 
 class WorkFlow(object):
     dag: DAG = DAG()
@@ -101,15 +116,15 @@ class WorkFlow(object):
 
 
 class FOLIOWorkFlow(WorkFlow):
-    def __init__(self, chat_instance):
+    def __init__(self, chat_instance: Union[ChatGPT, None] = None):
         super().__init__()
         self.contributor_types = None
         self.contributor_name_types = None
         self.identifier_types = None
         self.instance_types = None
         self.record = None
-        self.chat_instance = chat_instance
-        
+        self.chat = chat_instance
+        self.initial_prompt: str = ""
 
     async def get_types(self):
         if self.contributor_types is None:
@@ -132,16 +147,24 @@ class FOLIOWorkFlow(WorkFlow):
                 if ident_name.upper().startswith("OCLC"):
                     ident_name = "OCLC"
                 identifier["identifierTypeId"] = self.identifier_types.get(ident_name)
-        
+
         for contributor in self.record.get("contributors", []):
             contributor["contributorTypeId"] = self.contributor_types.get(
                 contributor.get("contributorTypeText", "Contributor")
             )
-            contributor[
-                "contributorNameTypeId"
-            ] = self.contributor_name_types.get("Personal name")
+            contributor["contributorNameTypeId"] = self.contributor_name_types.get(
+                "Personal name"
+            )
 
+    async def run(self):
+        await self.chat.set_system(self.system())
+        if self.instance_types is None:
+            await self.get_types()
 
+    def system(self):
+        system_prompt = self.system_prompt
 
-
-
+        if len(self.examples) > 0:
+            system_prompt = f"""{system_prompt}\nExamples:\n"""
+            system_prompt += "\n".join(self.examples)
+        self.system_prompt = system_prompt

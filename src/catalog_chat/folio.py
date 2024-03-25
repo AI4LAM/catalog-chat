@@ -231,7 +231,7 @@ async def get_instance_types() -> dict:
     return output
 
 
-def load_instance(url):
+async def load_instance(url):
     default_folio = document.getElementById("folio-default")
     if not "d-none" in default_folio.classList:
         default_folio.classList.add("d-none")

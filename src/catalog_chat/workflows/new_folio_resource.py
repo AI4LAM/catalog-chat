@@ -1,8 +1,16 @@
+import json
+
+from typing import Union
+
+from js import console
 from paradag import SequentialProcessor, dag_run
 
-from workflows import FOLIOWorkFlow, add_instance_sig
+from chat import ChatGPT, add_history
+from folio import add_instance, load_instance
+from workflows import FOLIOWorkFlow, WorkFlowExecutor, add_instance_sig
 
-from chat import ChatGPT
+from js import console
+
 
 class NewResource(FOLIOWorkFlow):
     name = "Create a New Resource"
@@ -19,10 +27,14 @@ class NewResource(FOLIOWorkFlow):
         add_instance_sig,
     ]
 
-    def __init__(self, zero_shot=False):
-        super().__init__()
-        self.zero_shot = zero_shot
-
+    def __init__(self, chat_instance: ChatGPT):
+        super().__init__(chat_instance)
+        self.chat.functions = NewResource.functions
+        self.dag.add_vertex(
+            self.initial_query, self.create_instance, self.load_into_folio
+        )
+        self.dag.add_edge(self.initial_query, self.create_instance)
+        self.dag.add_edge(self.create_instance, self.load_into_folio)
 
     async def __handle_func__(self, function_call):
         function_name = function_call.get("name")
@@ -30,43 +42,39 @@ class NewResource(FOLIOWorkFlow):
         output = None
         match function_name:
             case "add_instance":
-                record = json.loads(args.get("record"))
-                self.__update_record__(record)
-                instance_url = await add_instance(json.dumps(record))
+                self.record = json.loads(args.get("record"))
+                self.update_record()
+                instance_url = await add_instance(json.dumps(self.record))
                 output = instance_url
 
-            case "load_instance":
-                instance_url = json.loads(args.get("instance_url"))
-                load_instance(instance_url)
-                output = f"Loaded {instance_url} into iframe" 
-                
             case _:
                 output = f"Unknown function {function_name}"
         return output
 
+    async def initial_query(self):
+        self.system()
+        await self.chat.set_system(self.system_prompt)
+        chat_result = await self.chat(self.initial_prompt)
+        add_history(chat_result, "response")
+        return chat_result["choices"][0]["message"].get("function_call")
 
-    async def system(self):
-        system_prompt = NewResource.system_prompt
-        if self.instance_types is None:
-            await self.get_types()
+    async def create_instance(self, *args) -> Union[str, None]:
+        function_call = await args[0]
+        console.log(f"Create instance Function call {function_call}")
+        msg = await self.__handle_func__(function_call)
+        if not msg.startswith("Unknown") and msg.startswith("http"):
+            return msg
 
-        if self.zero_shot is False:
-            system_prompt = f"""{system_prompt}\nExamples:\n"""
-            system_prompt += "\n".join(NewResource.examples)
+    async def load_into_folio(self, *args):
+        instance_url = await args[0]
+        if instance_url is None:
+            add_history(f"Failed to Load FOLIO Instance")
+            return
+        add_history(f"Load FOLIO Instance {instance_url}", "prompt")
+        await load_instance(instance_url)
 
-        return system_prompt
-
-    async def run(self, chat_instance: ChatGPT, initial_prompt: str):
+    async def run(self, initial_prompt: str):
+        await super().run()
         add_history(initial_prompt, "prompt")
-        chat_instance.functions = NewResource.functions
-        chat_result = await chat_instance(initial_prompt)
-        function_call = chat_result["choices"][0]["message"].get("function_call")
-        if function_call:
-            add_history(chat_result, "response")
-            msg = await self.__handle_func__(function_call)
-            if not msg.startswith("Unknown"):
-                instance_url = msg
-                msg = f"Load FOLIO Instance {instance_url}"
-                add_history(msg, "prompt")
-                load_instance(instance_url)
-        return f"Finished {instance_url}"
+        self.initial_prompt = initial_prompt
+        dag_run(self.dag, processor=SequentialProcessor(), executor=WorkFlowExecutor())
