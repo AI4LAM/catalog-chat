@@ -176,9 +176,10 @@ async def run_prompt(workflow_class, chat_gpt_instance):
     loading_spinner = document.getElementById("chat-loading")
     loading_spinner.classList.remove("d-none")
 
-    if workflow_class is None:
-        alert("Workflow is None, exiting")
+    if workflow_class is None or chat_gpt_instance is None:
+        alert("Workflow is None or chat instance is None, exiting")
         return
+
     system_prompt_div = document.getElementById("system-text")
     if system_prompt_div.value.strip() != workflow_class.system_prompt:
         workflow_class.system_prompt = system_prompt_div.value.strip()
@@ -191,13 +192,12 @@ async def run_prompt(workflow_class, chat_gpt_instance):
     if len(examples) > 0:
         zero_shot = False
         workflow_class.examples = examples
+
     workflow = workflow_class(chat_instance=chat_gpt_instance)
-    console.log(f"Workflow {workflow.system_prompt} {examples}")
     current = main_chat_textarea.value
     if len(current) > 0:
         run_result = await workflow.run(current)
         loading_spinner.classList.add("d-none")
-
         main_chat_textarea.value = ""
 
 

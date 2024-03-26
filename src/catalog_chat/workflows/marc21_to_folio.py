@@ -2,6 +2,7 @@ from paradag import SequentialProcessor, dag_run
 
 from workflows import FOLIOWorkFlow, add_instance_sig
 
+
 class MARC21toFOLIO(FOLIOWorkFlow):
     name = "MARC21 to FOLIO Inventory Record"
     system_prompt = """In the role as an expert cataloger, you will be given a MARC21 record and then convert
@@ -60,11 +61,9 @@ to a FOLIO Instance JSON record
         add_instance_sig,
     ]
 
-
     def __init__(self, zero_shot=False):
         super().__init__()
         self.zero_shot = zero_shot
-
 
     async def system(self):
         system_prompt = MARC21toFOLIO.system_prompt
@@ -72,14 +71,11 @@ to a FOLIO Instance JSON record
         if self.instance_types is None:
             await self.get_types()
 
-        
         if self.zero_shot is False:
             system_prompt = f"""{system_prompt}\nExamples\n"""
             system_prompt += "\n".join(MARC21toFOLIO.examples)
-       
 
         return system_prompt
-
 
     async def run(self, chat_instance, initial_prompt: str):
         add_history(f"<pre>{initial_prompt}</pre>", "prompt")
@@ -91,7 +87,7 @@ to a FOLIO Instance JSON record
         add_history(chat_result, "response")
         function_name = function_call.get("name")
         args = json.loads(function_call.get("arguments"), strict=False)
-        #console.log(f"Function name {function_name} args: {args}")
+        # console.log(f"Function name {function_name} args: {args}")
         if function_name.startswith("add_instance"):
             record = args.get("record")
             if isinstance(record, str):

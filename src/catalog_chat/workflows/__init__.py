@@ -35,10 +35,9 @@ class WorkFlowExecutor(object):
         if callable(param):
             args = self.__level.get(param)
             is_async = asyncio.iscoroutinefunction(param)
-            console.log(f"In execute {param} is async {is_async}")
             if args:
                 if is_async:
-                    console.log(f"Before async call with {args}")
+                    console.log(f"Before {param} async call with {args}")
                     return asyncio.ensure_future(param(args))
                 return param(args)
             else:

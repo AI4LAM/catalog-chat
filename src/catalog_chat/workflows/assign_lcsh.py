@@ -3,17 +3,19 @@ from typing import Union
 from chat import add_history, ChatGPT
 from workflows import WorkFlow
 
+
 class AssignLCSH(WorkFlow):
     name = "Assign Library of Congress Subject Heading to record"
     system_prompt = "As an expert cataloger, you will use the context to assign Library of Congress Subject Headings to terms"
 
     examples = []
 
-    def __init__(self, zero_shot:bool=False, chat_instance: Union[ChatGPT, None]=None):
+    def __init__(
+        self, zero_shot: bool = False, chat_instance: Union[ChatGPT, None] = None
+    ):
         self.system = system
         self.react = react
         self.chat = chat_instance
-        
 
     async def system(self):
         system_prompt = AssignLCSH.system_prompt

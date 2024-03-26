@@ -128,9 +128,7 @@ def update_parameters(chat_gpt_instance):
     max_tokens_elem = document.getElementById("chat-max-tokens")
     if int(max_tokens_elem.value) != chat_gpt_instance.max_tokens:
         chat_gpt_instance.max_tokens = int(max_tokens_elem.value)
-    
-    
-    
+
 
 class ChatGPT(object):
     def __init__(
@@ -193,7 +191,6 @@ class ChatGPT(object):
         return result
 
 
-
 def _select_model(model):
     output = """<select id="chat-model" class="form-control">"""
     models = ["gpt-3.5-turbo", "gpt-4"]
@@ -206,6 +203,7 @@ def _select_model(model):
     output += f"{options}\n</select>"
     console.log(output)
     return output
+
 
 def update_chat_modal(chat_gpt_instance):
     modal_body = document.getElementById("chatApiKeyModalBody")
@@ -222,7 +220,7 @@ def update_chat_modal(chat_gpt_instance):
     model_dt.innerHTML = "Model"
     instance_dl.appendChild(model_dt)
     model_dd = document.createElement("dd")
-    model_dd.innerHTML = _select_model(chat_gpt_instance.model)    
+    model_dd.innerHTML = _select_model(chat_gpt_instance.model)
     instance_dl.appendChild(model_dd)
     temp_dt = document.createElement("dt")
     temp_dt.innerHTML = "Temperature"

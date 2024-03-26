@@ -60,7 +60,6 @@ class NewResource(FOLIOWorkFlow):
 
     async def create_instance(self, *args) -> Union[str, None]:
         function_call = await args[0]
-        console.log(f"Create instance Function call {function_call}")
         msg = await self.__handle_func__(function_call)
         if not msg.startswith("Unknown") and msg.startswith("http"):
             return msg

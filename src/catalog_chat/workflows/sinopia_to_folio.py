@@ -1,7 +1,15 @@
+from typing import Union
+
+from js import console
 from paradag import SequentialProcessor, dag_run
 
-from chat import ChatGPT
-from workflows import FOLIOWorkFlow, load_sinopia_sig, add_instance_sig
+from chat import ChatGPT, add_history
+from workflows import (
+    FOLIOWorkFlow,
+    WorkFlowExecutor,
+    load_sinopia_sig,
+    add_instance_sig,
+)
 
 
 class SinopiaToFOLIO(FOLIOWorkFlow):
@@ -40,69 +48,48 @@ and convert it to a FOLIO Instance JSON record"""
 """
     ]
 
-    functions = [
-        load_sinopia_sig,
-        add_instance_sig
-    ]
+    functions = [load_sinopia_sig, add_instance_sig]
 
-    def __init__(self,  zero_shot=False):
-        super().__init__()
-        self.zero_shot = zero_shot
+    def __init__(self, chat_instance: ChatGPT):
+        super().__init__(chat_instance)
+        self.chat.functions = SinopiaToFOLIO.functions
+        self.dag.add_vertex(
+            self.initial_query, self.load_sinopia_resource, self.create_instance
+        )
+        self.dag.add_edge(self.initial_query, self.load_sinopia_resource)
+        self.dag.add_edge(self.load_sinopia_resource, self.create_instance)
 
+    async def create_instance(self, *args) -> Union[str, None]:
+        function_call = await args[0]
+        record = json.loads(args.get("record"))
+        console.log(f"Create instance Function call {function_call}")
+        instance_url = ""
+        if function_call.startswith("adds_instance"):
+            self.update_record(record)
+            instance_url = await add_instance(json.dumps(record))
+        else:
+            console.log(f"Unknown function {function_call}")
+        if not instance_url.startswith("Unknown") and instance_url.startswith("http"):
+            return instance_url
 
-
-    async def __handle_func__(self, function_call) -> str:
-        function_name = function_call.get("name")
-        args = json.loads(function_call.get("arguments"))
-        output = None
-        match function_name:
-
-            case "add_instance":
-                record = json.loads(args.get("record"))
-                self.__update_record__(record)
-                console.log(f"SinopiaToFOLIO after update")
-                instance_url = await add_instance(json.dumps(record))
-                console.log(f"After SinopiaToFOLIO func call {instance_url}")
-                output = instance_url
-
-            case "load_sinopia":
-                sinopia_rdf = await load_sinopia(args.get("resource_url"))
-                prompt = "Add FOLIO Instance JSON record from" 
-                add_history(f"{prompt}<pre>{sinopia_rdf}</pre>", "prompt")
-                output = f"{prompt}\n{sinopia_rdf}"
-
-            case _:
-                output = f"Unknown function {function_name}"
-
-
-        return output
-    
-
-    #async def system(self):
-    #    system_prompt = SinopiaToFOLIO.system_prompt
-
-    #    if self.zero_shot is False:
-    #        system_prompt = f"{system_prompt}\n\nExamples"
-    #        system_prompt += "\n".join(self.examples)
-
-    #    return system_prompt
-
-    async def run(self, chat_instance: ChatGPT, initial_prompt: str):
-        add_history(initial_prompt, "prompt")
-        chat_instance.functions = SinopiaToFOLIO.functions
-        chat_result = await chat_instance(initial_prompt)
+    async def initial_query(self):
+        self.system()
+        await self.chat.set_system(self.system_prompt)
+        chat_result = await self.chat(self.initial_prompt)
         add_history(chat_result, "response")
-        function_call = chat_result["choices"][0]["message"].get("function_call")
-        if function_call:
-            first_result = await self.__handle_func__(function_call)
-            console.log(f"First result")
-            chat_result_rdf = await chat_instance(first_result)
-            final_func_call = chat_result_rdf["choices"][0]["message"].get("function_call")
-            console.log(f"Final func {final_func_call}")
-            final_result = await self.__handle_func__(final_func_call)
-            # console.log(f"The final result {final_result}")
-            add_history(chat_result_rdf, "response")
-            load_instance(final_result)
+        return chat_result["choices"][0]["message"].get("function_call")
 
-            return final_result
-        return "Workflow finished without completing"
+    async def load_sinopia_resource(self, *args):
+        resource_url = await args[0]
+        console.log(f"In load_sinopia_resource {resource_url}")
+        sinopia_rdf = await load_sinopia(resource_url)
+        prompt = "Add FOLIO Instance JSON record from"
+        add_history(f"{prompt}<pre>{sinopia_rdf}</pre>", "prompt")
+        return f"{prompt}\n{sinopia_rdf}"
+
+    async def run(self, initial_prompt: str):
+        await super().run()
+        self.initial_prompt = initial_prompt
+        add_history(initial_prompt, "prompt")
+        console.log(f"Before dag_run, {self.dag}")
+        dag_run(self.dag, processor=SequentialProcessor(), executor=WorkFlowExecutor())
