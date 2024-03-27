@@ -26,18 +26,19 @@
    
   </style>
  <py-config type="toml">
-  packages = ["pydantic", "./wheels/pymarc-4.2.2-py3-none-any.whl", "./wheels/rdflib-7.0.0-py3-none-any.whl"]
+  packages = ["pydantic", "./wheels/pymarc-4.2.2-py3-none-any.whl", "./wheels/rdflib-7.0.0-py3-none-any.whl", "./wheels/paradag-1.2.0-py2.py3-none-any.whl"]
 
   [[fetch]]
   from = "src/catalog_chat"
-  files = ["chat.py", "controls.py", "folio.py", "github.py", "sinopia.py", "workflows.py"]
+  files = ["chat.py", "controls.py", "folio.py", "github.py", "sinopia.py", "workflows/__init__.py", "workflows/assign_lcsh.py", "workflows/marc21_to_folio.py", "workflows/new_folio_resource.py", "workflows/sinopia_to_folio.py"]
+
 
   
  </py-config>
 </head>
 <body>
   <py-script>
-    __version__ = "0.0.3"
+    __version__ = "1.0.0"
 
     import asyncio
     import json
@@ -67,9 +68,6 @@
 
     from folio import Okapi, get_instance, logout_folio
     from folio import login as okapi_login
-
-    from workflows import AssignLCSH, MARC21toFOLIO, NewResource
-    
 
     version_span = document.getElementById("version")
     version_span.innerHTML = __version__
@@ -110,9 +108,10 @@
         else:
             alert("Need chat gpt instance and workflow to download history")
 
-    async def load_workflow(workflow_slug):
+    def load_workflow(workflow_slug):
         global workflow
-        workflow = await init_workflow(workflow_slug)
+        workflow = init_workflow(workflow_slug)
+        
 
 
     async def login_chatgpt():
@@ -345,10 +344,10 @@
                   </p>
                   <ul>
                     <li>
-                      <a href="#" py-click="asyncio.ensure_future(load_workflow('new-resource'))">Catalog a New Resource by Chat</a>
+                      <a href="#" py-click="load_workflow('new-resource')">Catalog a New Resource by Chat</a>
                     </li>
                     <li>
-                      <a href="#" py-click="asyncio.ensure_future(load_workflow('transform-bf-folio'))">Transform Sinopia BIBFRAME to FOLIO Inventory</a>
+                      <a href="#" py-click="load_workflow('transform-bf-folio')">Transform Sinopia BIBFRAME to FOLIO Inventory</a>
                     </li>
                     <!-- <li class="">
                       <a href="#" py-click="asyncio.ensure_future(load_workflow('add-lcsh'))">Add LCSH to Sinopia RDF or FOLIO Records</a>
@@ -439,7 +438,10 @@
                    </header>
                    <p>
                      Workflows in this app are inspired by <a href="https://airflow.apache.org/">Apache Airflow</a> and 
-                     <a href="https://www.prefect.io/">Prefect.io</a>. A workflow wraps LLM API calls along with calling 
+                     <a href="https://www.prefect.io/">Prefect.io</a> use of 
+                     <a href="https://en.wikipedia.org/wiki/Directed_acyclic_graph">DAGs (Directed Acyclic Graphs)</a>. 
+                     Catalog Chat uses the pure-python package, <a href="https://github.com/xianghuzhao/paradag/">paradag</a>, 
+                     to construct workflows as a DAG. A workflow wraps LLM API calls along with calling 
                      specific FOLIO Okapi and Sinopia APIs by building context and examples specific to the use case. 
                    </p>
                    <img src="imgs/workflow-flowchart.png" alt="Basic Cataloging Workflow Flowchart" />
@@ -474,6 +476,7 @@
                       <a href="https://pyscript.net/">pyscript</a> project that loads a Python 3.11 environment into your 
                       web-browser through Webassembly. We use the following Python packages:
                       <ul>
+                        <li><a href="https://github.com/xianghuzhao/paradag/">Paradag</a></li>
                         <li><a href="https://docs.pydantic.dev/latest/">Pydantic</a></li>
                         <li><a href="https://pymarc.readthedocs.io/en/latest/">Pymarc</a></li>
                         <li><a href="https://rdflib.readthedocs.io/en/stable/">RDFLib</a></li>
@@ -822,7 +825,7 @@
    <small>
    <p>
      An experimental Chat application by AI4LAM Metadata Working Group.
-     Version <span id="version"></span> &copy;2023. All source code licensed under the Apache 2, code repository at 
+     Version <span id="version"></span> &copy;2023-2024. All source code licensed under the Apache 2, code repository at 
      <a href="https://github.com/AI4LAM/catalog-chat">https://github.com/AI4LAM/catalog-chat</a>.
    </p>
    </small>
